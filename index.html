@@ -1,0 +1,62 @@
+<!doctype html>
+<html dir="rtl" lang="fa">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LAUREN — لباسِ ماندگار، استایلِ بی‌پایان</title>
+<meta name="description" content="لارن — فروشگاه پوشاک مردانه در تبریز. منتخبی از بهترین برندهای ترکیه: پولوشرت، بافت و ست‌های کامل. ارسال به سراسر ایران، تعویض سایز رایگان.">
+
+<meta name="theme-color" content="#0a0a0b">
+<meta name="color-scheme" content="dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="LAUREN">
+<meta name="mobile-web-app-capable" content="yes">
+
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="assets/icons/icon-48.png" sizes="48x48">
+<link rel="icon" href="assets/icons/icon-192.png" sizes="192x192">
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="LAUREN | لارن">
+<meta property="og:description" content="لباسِ ماندگار، استایلِ بی‌پایان — پوشاک مردانه، تبریز.">
+<meta property="og:image" content="assets/brand/og.jpg">
+<meta property="og:locale" content="fa_IR">
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="preload" as="font" type="font/woff2" crossorigin
+      href="assets/fonts/IRANYekanXFaNum-Regular.woff2">
+<link rel="preload" as="font" type="font/woff2" crossorigin
+      href="assets/fonts/IRANYekanXFaNum-Light.woff2">
+<link rel="stylesheet" href="css/app.css">
+
+<style>
+  /* holds the fold steady until the shell mounts */
+  #boot {
+    position: fixed; inset: 0; z-index: 300; background: #0a0a0b;
+    display: grid; place-items: center;
+    transition: opacity .5s ease, visibility .5s;
+  }
+  #boot img { width: 74px; opacity: .0; animation: bootIn 1.1s ease forwards; }
+  @keyframes bootIn { to { opacity: .85; } }
+  html.booted #boot { opacity: 0; visibility: hidden; }
+</style>
+</head>
+<body>
+
+<div id="boot"><img src="assets/brand/mark-bone.png" alt="LAUREN"></div>
+
+<main id="view"></main>
+
+<noscript>
+  <div style="padding:80px 24px;text-align:center;color:#ece9e3;font-family:sans-serif">
+    <h1 style="font-weight:400">LAUREN — لارن</h1>
+    <p>برای دیدن فروشگاه، جاوااسکریپت را روشن کنید.</p>
+    <p>تبریز، خیابان ولیعصر، مرکز خرید اطلس، طبقه GC</p>
+  </div>
+</noscript>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
