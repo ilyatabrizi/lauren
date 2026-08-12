@@ -50,7 +50,7 @@ export default function thanks(ctx) {
         ${o.items.map((i) => `
           <div class="miniline">
             <img src="assets/products/${i.img}.jpg" alt="" loading="lazy">
-            <div>${esc(i.title)}<span style="display:block">${esc(i.color)} · <span class="lat">${esc(i.size)}</span> · ${i.qty} عدد</span></div>
+            <div>${esc(i.title)}<span style="display:block">${esc(i.color)} · سایز <span class="lat">${esc(i.size)}</span> · ${i.qty} عدد</span></div>
             <b style="font-weight:500;white-space:nowrap">${toman(i.price * i.qty)}</b>
           </div>`).join('')}
       </div>

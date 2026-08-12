@@ -28,7 +28,7 @@ export function summaryPanel(t, { editable = true } = {}) {
             <img src="assets/products/${l.product.gallery[0]}.jpg" alt="" loading="lazy">
             <div>
               ${esc(l.product.title)}
-              <span style="display:block">${esc(l.product.colorName)} · <span class="lat">${esc(l.size)}</span> · ${l.qty} عدد</span>
+              <span style="display:block">${esc(l.product.colorName)} · سایز <span class="lat">${esc(l.size)}</span> · ${l.qty} عدد</span>
             </div>
             <b style="font-weight:500;white-space:nowrap">${toman(l.product.price * l.qty)}</b>
           </div>`).join('')}
