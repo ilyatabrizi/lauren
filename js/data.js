@@ -15,6 +15,7 @@ const CARE = 'شست‌وشو با آب سرد، پشت‌ورو. سفیدکنن
 export const PRODUCTS = [
   {
     id: 'polo-noir',
+    ref: '01',
     family: 'pique-stripe',
     cat: 'polo',
     title: 'پولوشرت پیکه نواردوزی',
@@ -36,6 +37,7 @@ export const PRODUCTS = [
   },
   {
     id: 'polo-blanc',
+    ref: '02',
     family: 'pique-stripe',
     cat: 'polo',
     title: 'پولوشرت پیکه نواردوزی',
@@ -56,6 +58,7 @@ export const PRODUCTS = [
   },
   {
     id: 'polo-steel',
+    ref: '03',
     family: 'pique-stripe',
     cat: 'polo',
     title: 'پولوشرت پیکه نواردوزی',
@@ -76,6 +79,7 @@ export const PRODUCTS = [
   },
   {
     id: 'polo-jade',
+    ref: '04',
     family: 'jacquard-knit',
     cat: 'polo',
     title: 'پولوشرت بافت ژاکارد',
@@ -96,6 +100,7 @@ export const PRODUCTS = [
   },
   {
     id: 'polo-bordeaux',
+    ref: '05',
     family: 'jacquard-knit',
     cat: 'polo',
     title: 'پولوشرت بافت ژاکارد',
@@ -115,6 +120,7 @@ export const PRODUCTS = [
   },
   {
     id: 'polo-collar',
+    ref: '06',
     family: 'contrast-collar',
     cat: 'polo',
     title: 'پولوشرت یقه‌ترکیبی',
@@ -135,6 +141,7 @@ export const PRODUCTS = [
   },
   {
     id: 'knit-ivory',
+    ref: '07',
     family: 'rib-knit',
     cat: 'knit',
     title: 'پولوشرت بافت ریب',
@@ -155,6 +162,7 @@ export const PRODUCTS = [
   },
   {
     id: 'knit-sand',
+    ref: '08',
     family: 'rib-knit',
     cat: 'knit',
     title: 'پولوشرت بافت ریب',
@@ -174,6 +182,7 @@ export const PRODUCTS = [
   },
   {
     id: 'set-onyx',
+    ref: '09',
     family: 'jacquard-suit',
     cat: 'set',
     title: 'ست پولوشرت و شلوار ژاکارد',
@@ -195,6 +204,7 @@ export const PRODUCTS = [
   },
   {
     id: 'set-cacao',
+    ref: '10',
     family: 'ringer-set',
     cat: 'set',
     title: 'ست تی‌شرت و شلوارک',
@@ -215,6 +225,7 @@ export const PRODUCTS = [
   },
   {
     id: 'set-olive',
+    ref: '11',
     family: 'ringer-set',
     cat: 'set',
     title: 'ست تی‌شرت و شلوارک',
@@ -235,6 +246,7 @@ export const PRODUCTS = [
   },
   {
     id: 'set-slate',
+    ref: '12',
     family: 'ringer-set',
     cat: 'set',
     title: 'ست تی‌شرت و شلوارک',
@@ -299,8 +311,8 @@ export const FAQ = [
     a: 'بله. تا ۷ روز پس از تحویل، با شرط استفاده‌نشدن و سالم‌بودن اتیکت، تعویض سایز رایگان است. هزینه‌ی ارسالِ برگشت با ماست.',
   },
   {
-    q: 'امتیازها چطور کار می‌کنند؟',
-    a: 'به ازای هر ۱۰٬۰۰۰ تومان خرید، ۱ امتیاز می‌گیرید و هر امتیاز ۵۰۰ تومان اعتبار برای خریدهای بعدی است. با بالا رفتن امتیاز، سطح باشگاه و مزایای شما هم ارتقا پیدا می‌کند.',
+    q: 'کیف اعتبار لارن چطور کار می‌کند؟',
+    a: 'بعد از هر خرید، ۵٪ مبلغ کالاها به‌صورت اعتبار به کیف شما برمی‌گردد و در سفارش بعدی مستقیم از فاکتور کم می‌شود — بدون واحد و محاسبه‌ی اضافه. در هر سفارش تا نصف مبلغ کالاها را می‌توانید با اعتبار بپردازید. هرچه بیشتر خرید کنید سطحتان بالاتر می‌رود و درصد برگشت به ۷ و بعد ۱۰ درصد می‌رسد.',
   },
   {
     q: 'اجناس اورجینال هستند؟',

@@ -61,7 +61,7 @@ export function toast(msg, icon = 'check') {
 /** <img> that fades in over its own tiny base64 preview. */
 export function photo(key, alt, { sizes = '', cls = '', eager = false } = {}) {
   const ph = LQIP[key] || '';
-  return `<div class="ph ${cls}" style="background-image:url(${ph})">
+  return `<div class="ph ${cls}" style="background-image:url(${ph});width:100%;height:100%">
     <img src="assets/products/${key}.jpg" alt="${esc(alt)}"
          ${eager ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async"
          ${sizes ? `sizes="${sizes}"` : ''} onload="this.classList.add('ready')">
@@ -76,34 +76,37 @@ export function settleImages(root = document) {
 }
 
 /* --------------------------------------------------------- product card -- */
-const BADGE = {
-  new:  { cls: 'new',  text: 'جدید' },
-  sale: { cls: 'sale', text: 'تخفیف' },
-  best: { cls: 'best', text: 'پرفروش' },
+const TAG = {
+  new:  { cls: 'tag',           text: 'جدید' },
+  sale: { cls: 'tag tag--quiet', text: 'قیمت ویژه' },
+  best: { cls: 'tag tag--quiet', text: 'پرفروش' },
 };
 
+/** A product card is a photograph inside a white vitrine well with a mount
+ *  margin. The photography is soft phone-grade; framed small it reads as
+ *  something under glass rather than something enlarged badly. */
 export function productCard(p, { eager = false } = {}) {
-  const b = BADGE[p.badge];
-  const off = p.compareAt ? Math.round((1 - p.price / p.compareAt) * 100) : 0;
+  const t = TAG[p.badge];
   const alt = p.gallery[1];
   return `
   <article class="card" data-card="${p.id}">
-    <a class="card__media" href="#/p/${p.id}" aria-label="${esc(p.title)} — ${esc(p.colorName)}">
-      ${photo(p.gallery[0], `${p.title} ${p.colorName}`, { eager, sizes: '(max-width:719px) 50vw, (max-width:1179px) 33vw, 25vw' })}
-      ${alt ? `<img class="alt" src="assets/products/${alt}.jpg" alt="" loading="lazy" decoding="async">` : ''}
-      <div class="card__badges">
-        ${b ? `<span class="badge badge--${b.cls}">${b.text}</span>` : ''}
-        ${off ? `<span class="badge badge--sale">${off}٪−</span>` : ''}
+    <a class="card__well" href="#/p/${p.id}" aria-label="${esc(p.title)} — ${esc(p.colorName)}">
+      <div class="card__img">
+        ${photo(p.gallery[0], `${p.title} ${p.colorName}`, { eager, sizes: '(max-width:759px) 45vw, (max-width:1159px) 30vw, 22vw' })}
+        ${alt ? `<img class="alt" src="assets/products/${alt}.jpg" alt="" loading="lazy" decoding="async">` : ''}
       </div>
-      <span class="card__quick">مشاهده و انتخاب سایز</span>
+      <div class="card__tags">
+        ${t ? `<span class="${t.cls}">${t.text}</span>` : ''}
+      </div>
     </a>
     <button class="card__fav ${inWish(p.id) ? 'is-on' : ''}" data-fav="${p.id}"
             aria-label="افزودن به علاقه‌مندی‌ها" aria-pressed="${inWish(p.id)}">${ICON.heart}</button>
     <a class="card__body" href="#/p/${p.id}">
+      <span class="card__ref">لارن <span class="num">${esc(p.ref)}</span></span>
       <h3 class="card__title">${esc(p.title)}</h3>
       <span class="card__meta">${esc(p.colorName)}</span>
       <div class="card__price">
-        <b>${toman(p.price)}</b>
+        <span>${toman(p.price)}</span>
         ${p.compareAt ? `<s class="card__was">${toman(p.compareAt)}</s>` : ''}
       </div>
     </a>
@@ -183,13 +186,16 @@ export function lightbox(src, alt = '') {
 /* --------------------------------------------------------------- fields -- */
 export function field(name, label, opts = {}) {
   const { type = 'text', placeholder = '', value = '', wide = false,
-          inputmode = '', maxlength = '', dir = '' } = opts;
+          inputmode = '', maxlength = '', dir = '', readonly = false,
+          autocomplete = '' } = opts;
   const tag = type === 'textarea'
     ? `<textarea id="f-${name}" name="${name}" placeholder="${esc(placeholder)}">${esc(value)}</textarea>`
     : `<input id="f-${name}" name="${name}" type="${type}" value="${esc(value)}"
               placeholder="${esc(placeholder)}"
               ${inputmode ? `inputmode="${inputmode}"` : ''}
               ${maxlength ? `maxlength="${maxlength}"` : ''}
+              ${autocomplete ? `autocomplete="${autocomplete}"` : ''}
+              ${readonly ? 'readonly' : ''}
               ${dir ? `dir="${dir}"` : ''}>`;
   return `<div class="field ${wide ? 'field--wide' : ''}" data-field="${name}">
     <label for="f-${name}">${esc(label)}</label>${tag}<span class="err"></span>

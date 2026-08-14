@@ -3,19 +3,21 @@
 
 import { SHOP } from './config.js';
 import { byId } from './data.js';
-import { pointsFor, tierFor, uid } from './util.js';
+import { uid, clamp } from './util.js';
 
-const KEY = 'lauren.v1';
+const KEY = 'lauren.v2';
 
 const blank = () => ({
   bag: [],          // { id, size, qty }
-  wish: [],         // product ids
-  user: null,       // { name, phone, email, joined }
-  addresses: [],    // { id, label, city, line, postal, receiver, phone }
-  orders: [],       // { id, ts, items, totals, status, address, shipping, gateway }
-  points: 0,        // spendable
-  lifetime: 0,      // never decreases — drives the tier
-  recent: [],       // recently viewed product ids
+  wish: [],         // product ids — kept for guests too
+  user: null,       // { name, phone, joined }
+  addresses: [],
+  orders: [],
+  credit: 0,        // spendable balance, in Toman
+  spend12: 0,       // merchandise spent in the last 12 months — sets the tier
+  ledger: [],       // { ts, kind: 'earn'|'spend'|'welcome', amount, note, ref }
+  welcomedPhones: [], // so signing out and back in can't re-mint the welcome
+  recent: [],
   coupon: null,
 });
 
@@ -35,7 +37,7 @@ const subs = new Set();
 export const subscribe = (fn) => { subs.add(fn); return () => subs.delete(fn); };
 
 export function commit(reason = 'change') {
-  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { /* quota / private mode */ }
+  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { /* private mode */ }
   subs.forEach((fn) => fn(reason));
   window.dispatchEvent(new CustomEvent('lauren:state', { detail: { reason } }));
 }
@@ -80,21 +82,53 @@ export function markViewed(id) {
   commit('recent');
 }
 
-/* ------------------------------------------------------------------ auth */
-export function signIn({ name, phone, email }) {
-  const isNew = !state.user;
-  state.user = {
-    name: name || state.user?.name || 'مهمان',
-    phone,
-    email: email || state.user?.email || '',
-    joined: state.user?.joined || Date.now(),
+/* ------------------------------------------------------------------ tier */
+export function tier() {
+  const list = SHOP.tiers;
+  let cur = list[0];
+  for (const t of list) if (state.spend12 >= t.minSpend) cur = t;
+  const next = list[list.indexOf(cur) + 1] || null;
+  const from = cur.minSpend;
+  const span = next ? next.minSpend - from : 1;
+  return {
+    tier: cur,
+    next,
+    rate: cur.rate,
+    toNext: next ? Math.max(0, next.minSpend - state.spend12) : 0,
+    progress: next ? clamp((state.spend12 - from) / span, 0, 1) : 1,
   };
-  if (isNew) {
-    state.points += SHOP.points.signupBonus;
-    state.lifetime += SHOP.points.signupBonus;
+}
+
+/* ------------------------------------------------------------------ auth */
+export function signIn({ name, phone }) {
+  const clean = String(phone).replace(/\D/g, '');
+  const returning = state.user && state.user.phone === clean;
+  state.user = {
+    name: name || (returning ? state.user.name : ''),
+    phone: clean,
+    joined: returning ? state.user.joined : Date.now(),
+  };
+  // The welcome credit is minted once per phone number. Keying it off
+  // "is there a user object?" let anyone sign out and back in for another
+  // 200,000 Toman, forever.
+  let welcomed = false;
+  if (!state.welcomedPhones.includes(clean)) {
+    state.welcomedPhones.push(clean);
+    state.credit += SHOP.wallet.welcome;
+    state.ledger.unshift({
+      ts: Date.now(), kind: 'welcome', amount: SHOP.wallet.welcome,
+      note: 'هدیه‌ی عضویت در باشگاه لارن',
+    });
+    welcomed = true;
   }
   commit('auth');
-  return isNew;
+  return welcomed;
+}
+
+export function setName(name) {
+  if (!state.user) return;
+  state.user.name = name;
+  commit('auth');
 }
 
 export function signOut() { state.user = null; commit('auth'); }
@@ -110,7 +144,7 @@ export function saveAddress(addr) {
 }
 
 /* ----------------------------------------------------------------- totals */
-export function totals({ shippingId, usePoints = 0, coupon = state.coupon } = {}) {
+export function totals({ shippingId, useCredit = 0, coupon = state.coupon } = {}) {
   const lines = bagLines();
   const sub = lines.reduce((n, l) => n + l.product.price * l.qty, 0);
   const listSub = lines.reduce((n, l) => n + (l.product.compareAt || l.product.price) * l.qty, 0);
@@ -119,26 +153,36 @@ export function totals({ shippingId, usePoints = 0, coupon = state.coupon } = {}
   const rule = coupon ? SHOP.coupons[coupon] : null;
   const couponOff = rule?.type === 'percent' ? Math.round(sub * rule.value / 100) : 0;
 
+  // Merchandise after discount — the base for both earning and the cap.
+  const goods = Math.max(0, sub - couponOff);
+
   const ship = SHOP.shipping.find((s) => s.id === shippingId);
-  let shipCost = ship ? ship.cost : 0;
+  const t = tier();
   const freeByTotal = sub >= SHOP.freeShippingOver;
   const freeByCoupon = rule?.type === 'shipping';
-  const freeByTier = tierFor(state.lifetime).tier.id !== 'member';
-  if (ship && (freeByTotal || freeByCoupon || freeByTier)) shipCost = 0;
+  const freeByTier = t.tier.id !== 'member';
+  const shipFree = freeByTotal || freeByCoupon || freeByTier;
+  const shipCost = ship ? (shipFree ? 0 : ship.cost) : 0;
 
-  const maxPoints = Math.min(state.points, Math.floor((sub - couponOff) / SHOP.points.tomanPerPoint));
-  const pointsUsed = Math.max(0, Math.min(usePoints, maxPoints));
-  const pointsOff = pointsUsed * SHOP.points.tomanPerPoint;
+  // Credit covers at most half the goods, and never the postage.
+  const cap = Math.floor(goods * SHOP.wallet.maxShareOfOrder);
+  const maxCredit = Math.min(state.credit, cap);
+  const creditUsed = Math.max(0, Math.min(Math.floor(useCredit), maxCredit));
 
-  const grand = Math.max(0, sub - couponOff - pointsOff + shipCost);
+  const grand = Math.max(0, goods - creditUsed + shipCost);
+
+  // Earned on the goods, before shipping and before credit — so postage never
+  // earns and spending credit doesn't shrink the next order's return.
+  const earns = Math.round(goods * t.rate);
 
   return {
     lines, count: lines.reduce((n, l) => n + l.qty, 0),
     sub, savedOnList, couponOff, couponLabel: rule?.label || null,
+    goods,
     shipCost, shipFree: !!ship && shipCost === 0,
     freeReason: freeByCoupon ? 'coupon' : freeByTotal ? 'total' : freeByTier ? 'tier' : null,
-    maxPoints, pointsUsed, pointsOff,
-    grand, earns: pointsFor(grand),
+    maxCredit, creditUsed, creditCap: cap,
+    grand, earns, rate: t.rate,
   };
 }
 
@@ -150,24 +194,34 @@ export function placeOrder({ address, shippingId, gateway, t, ref }) {
     ts: Date.now(),
     items: t.lines.map((l) => ({
       id: l.id, size: l.size, qty: l.qty,
-      title: l.product.title, color: l.product.colorName,
+      title: l.product.title, color: l.product.colorName, ref: l.product.ref,
       price: l.product.price, img: l.product.gallery[0],
     })),
     totals: {
-      sub: t.sub, shipCost: t.shipCost, couponOff: t.couponOff,
-      pointsOff: t.pointsOff, grand: t.grand,
+      sub: t.sub, goods: t.goods, shipCost: t.shipCost,
+      couponOff: t.couponOff, creditUsed: t.creditUsed, grand: t.grand,
     },
     earned: t.earns,
     address, shippingId, gateway,
     status: 'paid',
   };
   state.orders.unshift(order);
-  state.points = state.points - t.pointsUsed + t.earns;
-  state.lifetime += t.earns;
+
+  if (t.creditUsed > 0) {
+    state.ledger.unshift({
+      ts: order.ts, kind: 'spend', amount: -t.creditUsed,
+      note: 'استفاده در سفارش', ref: order.id,
+    });
+  }
+  state.ledger.unshift({
+    ts: order.ts + 1, kind: 'earn', amount: t.earns,
+    note: `${Math.round(t.rate * 100)}٪ از خرید`, ref: order.id,
+  });
+
+  state.credit = Math.max(0, state.credit - t.creditUsed + t.earns);
+  state.spend12 += t.goods;   // tier follows real spending only
   state.bag = [];
   state.coupon = null;
   commit('order');
   return order;
 }
-
-export const tier = () => tierFor(state.lifetime);

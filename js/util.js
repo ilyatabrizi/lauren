@@ -13,6 +13,13 @@ export const toman = (n) => `${groupDigits(n)} ${SHOP.currency}`;
 
 export const tomanShort = (n) => groupDigits(n);
 
+/** «۵ میلیون تومان» — for prose, where an exact figure would be noise. */
+export const tomanRound = (n) => {
+  const m = n / 1_000_000;
+  const v = m % 1 === 0 ? String(m) : m.toFixed(1).replace(/\.0$/, '');
+  return `${v} میلیون ${SHOP.currency}`;
+};
+
 /* ----------------------------------------------------------------- misc -- */
 export const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
@@ -41,19 +48,6 @@ export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
 ));
 
-/* --------------------------------------------------------------- points -- */
-export const pointsFor = (spend) => Math.floor(spend / SHOP.points.perToman);
-export const pointsValue = (pts) => pts * SHOP.points.tomanPerPoint;
-
-export const tierFor = (lifetimePoints) => {
-  const list = SHOP.tiers;
-  let cur = list[0];
-  for (const t of list) if (lifetimePoints >= t.min) cur = t;
-  const next = list[list.indexOf(cur) + 1] || null;
-  const span = next ? next.min - cur.min : 1;
-  const done = next ? lifetimePoints - cur.min : span;
-  return { tier: cur, next, progress: clamp(done / span, 0, 1) };
-};
 
 /* ---------------------------------------------------------------- input -- */
 /** Iranian mobile: 09xxxxxxxxx */

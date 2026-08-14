@@ -1,9 +1,9 @@
 // LAUREN — checkout: contact, address, shipping, payment method.
 
 import { SHOP, PREVIEW } from '../config.js';
-import { totals, state, saveAddress, signIn } from '../store.js';
+import { totals, state, saveAddress, signIn, setName } from '../store.js';
 import { field, fieldError, readForm, ICON, toast, settleImages } from '../ui.js';
-import { toman, esc, validPhone, validPostal, digitsOnly, $, $$ } from '../util.js';
+import { toman, tomanRound, esc, validPhone, validPostal, digitsOnly, $, $$ } from '../util.js';
 import { go } from '../router.js';
 
 const PROVINCES = ['آذربایجان شرقی', 'تهران', 'اصفهان', 'خراسان رضوی', 'فارس',
@@ -28,7 +28,8 @@ export function summaryPanel(t, { editable = true } = {}) {
             <img src="assets/products/${l.product.gallery[0]}.jpg" alt="" loading="lazy">
             <div>
               ${esc(l.product.title)}
-              <span style="display:block">${esc(l.product.colorName)} · سایز <span class="lat">${esc(l.size)}</span> · ${l.qty} عدد</span>
+              <span>${esc(l.product.colorName)} · سایز <bdi class="lat">${esc(l.size)}</bdi>${
+                l.qty > 1 ? ` — <bdi class="num">${l.qty}</bdi> عدد` : ''}</span>
             </div>
             <b style="font-weight:500;white-space:nowrap">${toman(l.product.price * l.qty)}</b>
           </div>`).join('')}
@@ -36,28 +37,27 @@ export function summaryPanel(t, { editable = true } = {}) {
 
       ${editable ? `
       <div class="coupon">
-        <input id="cp" placeholder="کد تخفیف" value="${esc(state.coupon || '')}"
-               style="background:var(--ink-2);border:1px solid var(--line);border-radius:3px;padding-inline:13px;color:var(--bone)">
+        <input id="cp" placeholder="کد تخفیف" value="${esc(state.coupon || '')}" aria-label="کد تخفیف">
         <button class="btn btn--ghost btn--sm" data-coupon>ثبت</button>
       </div>` : ''}
 
       <div class="sums">
         <div><span>جمع کالاها</span><span>${toman(t.sub)}</span></div>
         ${t.couponOff ? `<div class="save"><span>کد تخفیف (${esc(t.couponLabel)})</span><span>−${toman(t.couponOff)}</span></div>` : ''}
-        ${t.pointsOff ? `<div class="save"><span>امتیاز باشگاه (${t.pointsUsed})</span><span>−${toman(t.pointsOff)}</span></div>` : ''}
+        ${t.creditUsed ? `<div class="save"><span>اعتبار باشگاه</span><span>−${toman(t.creditUsed)}</span></div>` : ''}
         <div><span>ارسال</span><span>${t.shipCost ? toman(t.shipCost) : (t.freeReason ? 'رایگان' : '—')}</span></div>
         <div class="tot"><span>مبلغ قابل پرداخت</span><b>${toman(t.grand)}</b></div>
       </div>
-      <p class="tiny" style="margin-block-start:12px;display:flex;gap:8px;align-items:flex-start">
-        <span style="width:15px;color:var(--brass);flex:none">${ICON.spark}</span>
-        <span>پس از این خرید ${t.earns} امتیاز به حساب شما اضافه می‌شود.</span>
+      <p class="t-fine" style="margin-block-start:12px;display:flex;gap:8px;align-items:flex-start">
+        <span style="width:15px;color:var(--thread);flex:none">${ICON.spark}</span>
+        <span>${toman(t.earns)} اعتبار پس از این خرید به کیف شما اضافه می‌شود.</span>
       </p>
     </div>
   </aside>`;
 }
 
 export default function checkout() {
-  const t0 = totals();
+  const t0 = totals({ shippingId: SHOP.shipping[0].id });
   if (!t0.lines.length) {
     return { html: `<div class="wrap empty" style="padding-block-start:calc(var(--top-h) + 70px)">
       ${ICON.bag}<h3>سبد خرید خالی است</h3>
@@ -69,10 +69,10 @@ export default function checkout() {
   const a = state.addresses[0] || {};
   let shippingId = SHOP.shipping[0].id;
   let gateway = SHOP.gateways[0].id;
-  let usePoints = 0;
+  let useCredit = 0;
 
   const html = `
-  <div class="wrap" style="padding-block-start:calc(var(--top-h) + 30px)">
+  <div class="wrap page-top">
     ${steps(1)}
     <div class="flow">
       <div>
@@ -112,19 +112,19 @@ export default function checkout() {
                 <span class="pickitem__p">${toman(s.cost)}</span>
               </label>`).join('')}
           </div>
-          <p class="tiny" style="margin-block-start:14px">
-            سفارش‌های بالای ${toman(SHOP.freeShippingOver)} و اعضای نقره‌ای به بالا، ارسال رایگان دارند.
+          <p class="t-fine" style="margin-block-start:14px">
+            سفارش‌های بالای ${tomanRound(SHOP.freeShippingOver)} و اعضای نقره‌ای به بالا، ارسال رایگان دارند.
           </p>
         </div>
 
-        ${state.points > 0 ? `
+        ${state.credit > 0 ? `
         <div class="panel">
-          <h3>امتیاز باشگاه</h3>
-          <label class="pickitem" data-usepoints>
+          <h3>کیف اعتبار</h3>
+          <label class="pickitem" data-usecredit>
             <span class="pickitem__dot"></span>
-            <span class="pickitem__t">استفاده از ${t0.maxPoints} امتیاز
-              <span class="pickitem__s">موجودی شما: ${state.points} امتیاز</span></span>
-            <span class="pickitem__p">−${toman(t0.maxPoints * SHOP.points.tomanPerPoint)}</span>
+            <span class="pickitem__t">استفاده از اعتبار
+              <span class="pickitem__s">موجودی: ${toman(state.credit)} · تا نصف مبلغ کالاها قابل استفاده است</span></span>
+            <span class="pickitem__p" data-creditmax>−${toman(t0.maxCredit)}</span>
           </label>
         </div>` : ''}
 
@@ -136,13 +136,13 @@ export default function checkout() {
                 <input type="radio" name="gate" value="${g.id}" ${i === 0 ? 'checked' : ''}>
                 <span class="pickitem__dot"></span>
                 <span class="pickitem__t">${esc(g.label)}<span class="pickitem__s">${esc(g.sub)}</span></span>
-                <span style="width:18px;color:var(--bone-3)">${ICON.card}</span>
+                <span style="width:18px;color:var(--faint)">${ICON.card}</span>
               </label>`).join('')}
           </div>
           ${PREVIEW.enabled ? `
-          <p class="tiny" style="margin-block-start:16px;display:flex;gap:8px;align-items:flex-start;
+          <p class="t-fine" style="margin-block-start:16px;display:flex;gap:8px;align-items:flex-start;
                     padding:12px 13px;background:rgba(194,163,107,.07);border-radius:3px">
-            <span style="width:15px;color:var(--brass);flex:none">${ICON.info}</span>
+            <span style="width:15px;color:var(--thread);flex:none">${ICON.info}</span>
             <span>${esc(PREVIEW.note)} در صفحه‌ی بعد یک کارت آزمایشی از قبل پر شده است — اطلاعات کارت واقعی وارد نکنید.</span>
           </p>` : ''}
           <button class="btn btn--block btn--lg" data-pay style="margin-block-start:20px">
@@ -160,8 +160,13 @@ export default function checkout() {
     mount(root) {
       settleImages(root);
       const repaint = () => {
-        const t = totals({ shippingId, usePoints, coupon: state.coupon });
+        const t = totals({ shippingId, useCredit, coupon: state.coupon });
         $('[data-summary]', root).innerHTML = summaryPanel(t);
+        // the credit row quotes a cap derived from the coupon, so it goes
+        // stale the moment a code is applied unless it repaints too
+        const max = $('[data-creditmax]', root);
+        if (max) max.textContent = `−${toman(t.maxCredit)}`;
+        if (useCredit) useCredit = t.maxCredit;
         bindCoupon();
         settleImages(root);
       };
@@ -194,9 +199,9 @@ export default function checkout() {
       group('[data-ship]', (v) => { shippingId = v; repaint(); });
       group('[data-gate]', (v) => { gateway = v; });
 
-      $('[data-usepoints]', root)?.addEventListener('click', function () {
+      $('[data-usecredit]', root)?.addEventListener('click', function () {
         const on = this.classList.toggle('is-on');
-        usePoints = on ? totals({ shippingId }).maxPoints : 0;
+        useCredit = on ? totals({ shippingId, coupon: state.coupon }).maxCredit : 0;
         repaint();
       });
 
@@ -219,7 +224,8 @@ export default function checkout() {
           return;
         }
 
-        signIn({ name: f.name, phone: digitsOnly(f.phone) });
+        signIn({ phone: digitsOnly(f.phone) });
+        setName(f.name);
         const addr = saveAddress({
           id: state.addresses[0]?.id,
           label: 'آدرس اصلی',
@@ -228,7 +234,7 @@ export default function checkout() {
         });
 
         sessionStorage.setItem('lauren.pending', JSON.stringify({
-          addressId: addr.id, shippingId, gateway, usePoints,
+          addressId: addr.id, shippingId, gateway, useCredit,
         }));
         go('/pay');
       });

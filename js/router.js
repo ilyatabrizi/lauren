@@ -59,14 +59,25 @@ export async function render(outlet) {
   hooks.after.forEach((fn) => fn(ctx, outlet));
 }
 
+let mounted = null;
+
 export function start(outlet) {
+  mounted = outlet;
   outlet.style.transition = 'opacity .22s ease';
   addEventListener('hashchange', () => render(outlet));
   render(outlet);
 }
 
+/** Re-run the current route. */
+export const refresh = () => (mounted ? render(mounted) : undefined);
+
 export const go = (to, { replace = false } = {}) => {
   const h = to.startsWith('#') ? to : '#' + to;
+  const now = location.hash || '#/';
+  // Assigning the hash it already has fires no hashchange, so a view that
+  // navigates to itself — signing in at #/account, signing out again —
+  // would sit there unchanged. Re-render by hand instead.
+  if (now === h) return refresh();
   if (replace) location.replace(h);
   else location.hash = h;
 };

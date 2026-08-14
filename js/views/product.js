@@ -6,8 +6,8 @@ import {
   photo, productCard, bindCards, bindAccordions, accordion,
   reveal, toast, ICON, lightbox, settleImages,
 } from '../ui.js';
-import { toman, esc, pointsFor, $, $$ } from '../util.js';
-import { addToBag, inWish, toggleWish, markViewed } from '../store.js';
+import { toman, tomanRound, esc, $, $$ } from '../util.js';
+import { addToBag, inWish, toggleWish, markViewed, tier } from '../store.js';
 import { openBag } from '../bag.js';
 import { go } from '../router.js';
 
@@ -15,49 +15,52 @@ const sizeGuideTable = () => `
   <table class="tbl">
     <thead><tr>${SIZE_GUIDE.cols.map((c) => `<th>${esc(c)}</th>`).join('')}</tr></thead>
     <tbody>${SIZE_GUIDE.rows.map((r) => `<tr>${r.map((c, i) =>
-      `<td${i === 0 ? ' class="lat" style="color:var(--bone)"' : ''}>${esc(c)}</td>`).join('')}</tr>`).join('')}
+      `<td${i === 0 ? ' class="lat" style="color:var(--ink)"' : ''}>${esc(c)}</td>`).join('')}</tr>`).join('')}
     </tbody>
   </table>
-  <p class="tiny" style="margin-block-start:14px">${esc(SIZE_GUIDE.note)}</p>`;
+  <p class="t-fine" style="margin-block-start:14px">${esc(SIZE_GUIDE.note)}</p>`;
 
 export default function product(ctx) {
   const p = byId(ctx.params.id);
-  if (!p) return { html: `<div class="wrap empty" style="padding-block-start:calc(var(--top-h) + 60px)">
+  if (!p) return { html: `<div class="wrap empty page-top">
       <h3>این محصول پیدا نشد</h3>
       <a class="btn btn--ghost btn--sm" href="#/shop" style="margin-block-start:18px">بازگشت به فروشگاه</a>
     </div>` };
 
   markViewed(p.id);
   const sibs = family(p);
-  const off = p.compareAt ? Math.round((1 - p.price / p.compareAt) * 100) : 0;
   const related = PRODUCTS.filter((x) => x.cat === p.cat && x.family !== p.family).slice(0, 4);
-  const earns = pointsFor(p.price);
+  const rate = tier().rate;
+  const earns = Math.round(p.price * rate);
 
   const html = `
-  <div class="wrap" style="padding-block-start:calc(var(--top-h) + 26px)">
+  <div class="wrap page-top">
     <nav class="crumbs">
       <a href="#/">خانه</a><span>/</span>
       <a href="#/shop?cat=${p.cat}">${esc(p.cat === 'polo' ? 'پولوشرت' : p.cat === 'knit' ? 'بافت' : 'ست')}</a>
-      <span>/</span><span class="dim">${esc(p.title)}</span>
+      <span>/</span><span>${esc(p.title)}</span>
     </nav>
 
     <div class="pdp">
       <div class="pdp__gal">
         ${p.gallery.map((g, i) => `
-          <button class="pdp__shot" data-zoom="assets/products/${g}.jpg" aria-label="بزرگ‌نمایی تصویر">
-            ${photo(g, `${p.title} — ${p.colorName}`, { eager: i === 0, sizes: '(max-width:939px) 100vw, 45vw' })}
+          <button class="pdp__shot vit" data-zoom="assets/products/${g}.jpg" aria-label="بزرگ‌نمایی تصویر">
+            <div class="vit__img">
+              ${photo(g, `${p.title} — ${p.colorName}`, { eager: i === 0, sizes: '(max-width:939px) 92vw, 46vw' })}
+            </div>
           </button>`).join('')}
       </div>
 
       <div class="pdp__info">
-        <div class="pdp__latin lat">${esc(p.latin)}</div>
+        <div class="pdp__ref">لارن <span class="num">${esc(p.ref)}</span></div>
         <h1>${esc(p.title)}</h1>
+        <div class="pdp__latin label">${esc(p.latin)}</div>
 
         <div class="pdp__price">
           <b>${toman(p.price)}</b>
-          ${p.compareAt ? `<s>${toman(p.compareAt)}</s><span class="pdp__off">${off}٪ تخفیف</span>` : ''}
+          ${p.compareAt ? `<s>${toman(p.compareAt)}</s>` : ''}
         </div>
-        <p class="tiny">قیمت با احتساب مالیات · ارسال در مرحله‌ی بعد محاسبه می‌شود</p>
+        <p class="t-fine">قیمت با احتساب مالیات · ارسال در مرحله‌ی بعد محاسبه می‌شود</p>
 
         ${sibs.length > 1 ? `
         <div class="opt">
@@ -73,7 +76,7 @@ export default function product(ctx) {
         <div class="opt">
           <div class="opt__head">
             <b>سایز</b>
-            <button class="link-u" data-guide style="border:0;padding:0;font-size:12px">
+            <button class="link" data-guide>
               ${ICON.ruler}<span>راهنمای سایز</span>
             </button>
           </div>
@@ -82,8 +85,8 @@ export default function product(ctx) {
               <button class="size ${p.lowStock.includes(s) ? 'is-low' : ''}" data-size="${s}"
                       aria-pressed="false">${s}</button>`).join('')}
           </div>
-          ${p.lowStock.length ? `<p class="tiny" style="margin-block-start:10px">
-            <span style="color:var(--brass)">●</span> سایزهای علامت‌دار موجودی محدودی دارند
+          ${p.lowStock.length ? `<p class="t-fine" style="margin-block-start:10px">
+            <span style="color:var(--thread)">●</span> سایزهای علامت‌دار موجودی محدودی دارند
           </p>` : ''}
         </div>
 
@@ -97,9 +100,8 @@ export default function product(ctx) {
         </div>
 
         <div class="trust">
-          <div>${ICON.spark}<span>با خرید این محصول <b style="color:var(--bone);font-weight:500">${earns} امتیاز</b>
-            می‌گیرید — معادل ${toman(earns * SHOP.points.tomanPerPoint)} اعتبار خرید بعدی.</span></div>
-          <div>${ICON.truck}<span>ارسال رایگان برای سفارش‌های بالای ${toman(SHOP.freeShippingOver)} · پیک همان روز در تبریز</span></div>
+          <div>${ICON.spark}<span><b>${toman(earns)} اعتبار</b> از این خرید به کیف شما برمی‌گردد — در سفارش بعدی مستقیم کم می‌شود.</span></div>
+          <div>${ICON.truck}<span>ارسال رایگان بالای ${tomanRound(SHOP.freeShippingOver)} · پیک همان روز در تبریز</span></div>
           <div>${ICON.swap}<span>تعویض سایز تا ۷ روز، رایگان</span></div>
         </div>
 
@@ -128,8 +130,8 @@ export default function product(ctx) {
   ${related.length ? `
   <section class="sec wrap">
     <div class="sec__head">
-      <div><span class="eyebrow-fa">شاید بپسندید</span>
-      <h2 class="h-sec" style="margin-block-start:12px">با این هم خوب می‌نشیند</h2></div>
+      <div><span class="eyebrow">شاید بپسندید</span>
+      <h2 class="t-h1" style="margin-block-start:12px">با این هم خوب می‌نشیند</h2></div>
     </div>
     <div class="grid" data-cards>
       ${related.map((r, i) => `<div class="rv rv-d${i}">${productCard(r)}</div>`).join('')}
@@ -177,8 +179,8 @@ export default function product(ctx) {
       const wish = $('[data-wish]', root);
       const paint = () => {
         const on = inWish(p.id);
-        wish.style.color = on ? 'var(--brass)' : '';
-        wish.querySelector('svg').style.fill = on ? 'var(--brass)' : 'none';
+        wish.style.color = on ? 'var(--thread)' : '';
+        wish.querySelector('svg').style.fill = on ? 'var(--thread)' : 'none';
         wish.setAttribute('aria-pressed', String(on));
       };
       paint();

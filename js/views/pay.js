@@ -18,10 +18,10 @@ const pending = () => {
 
 export default function pay() {
   const pend = pending();
-  const t = totals({ shippingId: pend?.shippingId, usePoints: pend?.usePoints || 0 });
+  const t = totals({ shippingId: pend?.shippingId, useCredit: pend?.useCredit || 0 });
 
   if (!pend || !t.lines.length) {
-    return { html: `<div class="wrap empty" style="padding-block-start:calc(var(--top-h) + 70px)">
+    return { html: `<div class="wrap empty page-top">
       <h3>سفارشی برای پرداخت نیست</h3>
       <a class="btn btn--ghost btn--sm" href="#/shop" style="margin-block-start:18px">بازگشت به فروشگاه</a>
     </div>` };

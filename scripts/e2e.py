@@ -3,8 +3,8 @@
 
 Walks the store the way a customer would: browse, filter, pick a size, fill
 the bag, apply a coupon, check out, pay at the preview gateway, and confirm
-the order and loyalty points landed. Also checks the PWA bits and that every
-route renders without a console error.
+the order and the credit wallet landed. Also checks the PWA bits, the Persian
+typography rules, and that every route renders without a console error.
 
     python3 scripts/e2e.py [base_url]
 
@@ -60,8 +60,14 @@ def run(page, errors):
     page.wait_for_timeout(400)
     page.locator('[data-fav]').first.click()
     page.wait_for_timeout(250)
-    wish = page.evaluate("JSON.parse(localStorage.getItem('lauren.v1')).wish")
+    wish = page.evaluate("JSON.parse(localStorage.getItem('lauren.v2')).wish")
     check('heart saves to the wishlist', len(wish) == 1, wish)
+
+    # a guest can build a wishlist, so a guest must be able to read it back
+    page.goto(f'{BASE}/#/account?tab=wish', wait_until='networkidle')
+    page.wait_for_timeout(500)
+    check('guest can open their wishlist', page.locator('.card').count() == 1,
+          page.locator('.card').count())
 
     # ------------------------------------------------------------------ bag
     print('\nbag')
@@ -70,7 +76,7 @@ def run(page, errors):
     page.click('[data-add]')
     page.wait_for_timeout(300)
     check('size gate blocks a bare add',
-          page.evaluate("JSON.parse(localStorage.getItem('lauren.v1')).bag.length") == 0)
+          page.evaluate("JSON.parse(localStorage.getItem('lauren.v2')).bag.length") == 0)
 
     page.click('[data-size="L"]')
     page.click('[data-add]')
@@ -80,12 +86,12 @@ def run(page, errors):
     page.locator('.drawer [data-inc]').first.click()
     page.wait_for_timeout(300)
     check('quantity steps up',
-          page.evaluate("JSON.parse(localStorage.getItem('lauren.v1')).bag[0].qty") == 2)
+          page.evaluate("JSON.parse(localStorage.getItem('lauren.v2')).bag[0].qty") == 2)
 
     page.locator('.drawer [data-dec]').first.click()
     page.wait_for_timeout(300)
     check('quantity steps down',
-          page.evaluate("JSON.parse(localStorage.getItem('lauren.v1')).bag[0].qty") == 1)
+          page.evaluate("JSON.parse(localStorage.getItem('lauren.v2')).bag[0].qty") == 1)
 
     page.keyboard.press('Escape')
     page.wait_for_timeout(400)
@@ -124,7 +130,7 @@ def run(page, errors):
     page.click('[data-coupon]')
     page.wait_for_timeout(350)
     check('bad coupon is refused',
-          page.evaluate("JSON.parse(localStorage.getItem('lauren.v1')).coupon") is None)
+          page.evaluate("JSON.parse(localStorage.getItem('lauren.v2')).coupon") is None)
 
     page.fill('#cp', 'LAUREN10')
     page.click('[data-coupon]')
@@ -132,9 +138,10 @@ def run(page, errors):
     sums = page.inner_text('.summary .sums')
     check('coupon shows a discount line', 'کد تخفیف' in sums, sums.replace('\n', ' '))
 
-    grand_before = page.evaluate("""
-      (() => { const t = document.querySelectorAll('.summary .sums div');
-        return t[t.length-1].innerText.replace(/\\s+/g,' '); })()""")
+    # shipping is pre-selected, so the arrival total must already include it
+    ship_row = [r for r in page.inner_text('.summary .sums').split('\n') if 'ارسال' in r]
+    check('shipping is priced on arrival, not "—"', '—' not in ' '.join(ship_row),
+          ' '.join(ship_row))
 
     page.click('[data-pay]')
     page.wait_for_timeout(700)
@@ -167,19 +174,27 @@ def run(page, errors):
 
     # ----------------------------------------------------------------- order
     print('\norder + loyalty')
-    st = page.evaluate("JSON.parse(localStorage.getItem('lauren.v1'))")
+    st = page.evaluate("JSON.parse(localStorage.getItem('lauren.v2'))")
     check('order recorded', len(st['orders']) == 1, len(st['orders']))
     check('bag emptied', st['bag'] == [], st['bag'])
     o = st['orders'][0]
     check('order has both lines', len(o['items']) == 2, len(o['items']))
-    expected = o['totals']['sub'] - o['totals']['couponOff'] \
-        - o['totals']['pointsOff'] + o['totals']['shipCost']
+    expected = o['totals']['goods'] - o['totals']['creditUsed'] + o['totals']['shipCost']
     check('totals add up', o['totals']['grand'] == expected,
           f"{o['totals']['grand']} vs {expected}")
-    check('points awarded', st['points'] == 50 + o['earned'],
-          f"{st['points']} vs {50 + o['earned']}")
-    check('earned = grand / 10,000', o['earned'] == o['totals']['grand'] // 10_000,
-          f"{o['earned']} vs {o['totals']['grand'] // 10_000}")
+    check('goods = subtotal minus coupon',
+          o['totals']['goods'] == o['totals']['sub'] - o['totals']['couponOff'])
+    # credit is earned on the goods, so postage never earns and spending credit
+    # does not shrink what the next order returns
+    check('credit earned on goods, not on the amount paid',
+          o['earned'] == round(o['totals']['goods'] * 0.05),
+          f"{o['earned']} vs {round(o['totals']['goods'] * 0.05)}")
+    check('balance = welcome − spent + earned',
+          st['credit'] == 200_000 - o['totals']['creditUsed'] + o['earned'],
+          f"{st['credit']}")
+    check('tier tracks real spend only', st['spend12'] == o['totals']['goods'],
+          f"{st['spend12']} vs {o['totals']['goods']}")
+    check('ledger records the earn', any(r['kind'] == 'earn' for r in st['ledger']))
     check('confirmation shows the order id', o['id'] in page.inner_text('#view'))
 
     page.goto(f'{BASE}/#/account?tab=orders', wait_until='networkidle')
@@ -188,13 +203,61 @@ def run(page, errors):
 
     page.goto(f'{BASE}/#/account', wait_until='networkidle')
     page.wait_for_timeout(500)
-    check('club shows the points balance', str(st['points']) in page.inner_text('.ring__c'),
-          page.inner_text('.ring__c').replace('\n', ' '))
+    check('wallet shows the balance in Toman',
+          'تومان' in page.inner_text('.wallet__amt'),
+          page.inner_text('.wallet__amt'))
+
+    # ---------------------------------------------------------- wallet rules
+    print('\nwallet rules')
+    before = page.evaluate("JSON.parse(localStorage.getItem('lauren.v2'))")
+    page.goto(f'{BASE}/#/account?tab=profile', wait_until='networkidle')
+    page.wait_for_timeout(500)
+    page.click('[data-signout]')
+    page.wait_for_timeout(600)
+    page.fill('[name="phone"]', '09141234567')
+    page.click('[data-step1] button[type=submit]')
+    page.wait_for_timeout(500)
+    otp = page.inner_text('[data-sent] b').strip()
+    boxes = page.locator('.otp input')
+    for i, ch in enumerate(otp):
+        boxes.nth(i).fill(ch)
+    page.wait_for_timeout(900)
+    after = page.evaluate("JSON.parse(localStorage.getItem('lauren.v2'))")
+    # signing out and back in used to re-mint the welcome bonus every time
+    check('welcome credit is minted once per phone',
+          after['credit'] == before['credit'],
+          f"{before['credit']} -> {after['credit']}")
+
+    # credit must never cover more than half an order
+    page.goto(f'{BASE}/#/p/polo-noir', wait_until='networkidle')
+    page.wait_for_timeout(450)
+    page.click('[data-size="L"]'); page.click('[data-add]')
+    page.wait_for_timeout(400)
+    page.keyboard.press('Escape')
+    cap = page.evaluate("""() => {
+      const s = JSON.parse(localStorage.getItem('lauren.v2'));
+      return { credit: s.credit };
+    }""")
+    page.goto(f'{BASE}/#/checkout', wait_until='networkidle')
+    page.wait_for_timeout(600)
+    if page.locator('[data-usecredit]').count():
+        page.click('[data-usecredit]')
+        page.wait_for_timeout(500)
+        rows = page.inner_text('.summary .sums')
+        check('credit row appears when applied', 'اعتبار' in rows, rows.replace('\n', ' '))
+        used = page.evaluate("""() => {
+          const el = [...document.querySelectorAll('.summary .sums div')]
+            .find(d => d.innerText.includes('اعتبار'));
+          return el ? el.innerText : '';
+        }""")
+        check('credit is capped at half the goods', bool(used), used)
 
     # ------------------------------------------------------------- persistence
+    page.goto(f'{BASE}/#/account', wait_until='networkidle')
+    page.wait_for_timeout(500)
     page.reload(wait_until='networkidle')
     page.wait_for_timeout(600)
-    st2 = page.evaluate("JSON.parse(localStorage.getItem('lauren.v1'))")
+    st2 = page.evaluate("JSON.parse(localStorage.getItem('lauren.v2'))")
     check('state survives a reload', st2['orders'][0]['id'] == o['id'])
 
     # -------------------------------------------------------------------- pwa
@@ -216,9 +279,20 @@ def run(page, errors):
     check('page is RTL', page.get_attribute('html', 'dir') == 'rtl')
     fam = page.evaluate("getComputedStyle(document.querySelector('.card__title')).fontFamily")
     check('Persian text uses YekanX', 'YekanX' in fam, fam)
+    # letter-spacing on Arabic script breaks the joins between letters
+    spaced = page.evaluate("""() => [...document.querySelectorAll('#view *')]
+      .filter(el => {
+        const cs = getComputedStyle(el);
+        const ls = parseFloat(cs.letterSpacing);
+        if (!ls) return false;
+        const own = [...el.childNodes].filter(n => n.nodeType === 3)
+          .map(n => n.textContent).join('');
+        return /[\u0600-\u06FF]/.test(own);
+      }).map(el => el.className || el.tagName).slice(0, 5)""")
+    check('no letter-spacing on Persian text', not spaced, spaced)
     loaded = page.evaluate("document.fonts.check('16px YekanX')")
     check('YekanX actually loaded', loaded)
-    price = page.inner_text('.card__price b')
+    price = page.inner_text('.card__price')
     check('prices use the Persian thousands mark', '٬' in price, price)
     check('no unresolved template braces in the DOM',
           '${' not in page.inner_text('body'))

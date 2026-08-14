@@ -42,13 +42,13 @@ export default function shop(ctx) {
   const active = CATEGORIES.find((c) => c.id === cat) || CATEGORIES[0];
 
   const html = `
-  <div class="wrap" style="padding-block-start:calc(var(--top-h) + 34px)">
-    <span class="eyebrow-fa">فروشگاه</span>
-    <h1 class="h-sec" style="margin-block:12px 8px">${esc(active.name)}</h1>
-    <p class="tiny">${list.length} محصول${q ? ` برای «${esc(q)}»` : ''}</p>
+  <div class="wrap page-top">
+    <span class="eyebrow">فروشگاه</span>
+    <h1 class="t-h1" style="margin-block:var(--s2) var(--s1)">${esc(active.name)}</h1>
+    <p class="t-small">${list.length} محصول${q ? ` برای «${esc(q)}»` : ''}</p>
   </div>
 
-  <div class="shopbar" style="margin-block-start:26px">
+  <div class="shopbar" style="margin-block-start:var(--s5)">
     <div class="shopbar__in">
       <div class="shopbar__cats">
         ${CATEGORIES.map((c) => `
@@ -74,10 +74,10 @@ export default function shop(ctx) {
       <div class="empty">
         ${ICON.search}
         <h3>چیزی پیدا نشد</h3>
-        <p class="tiny" style="max-width:34ch;margin-inline:auto">
+        <p class="t-small" style="max-width:34ch;margin-inline:auto">
           فیلترها را بردارید یا عبارت دیگری را امتحان کنید. برای مشورت هم می‌توانید در واتساپ پیام بدهید.
         </p>
-        <a class="btn btn--ghost btn--sm" href="#/shop" style="margin-block-start:22px">دیدن همه‌ی محصولات</a>
+        <a class="btn btn--ghost btn--sm" href="#/shop" style="margin-block-start:var(--s5)">دیدن همه‌ی محصولات</a>
       </div>`}
   </section>`;
 

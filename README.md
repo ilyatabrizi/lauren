@@ -3,8 +3,30 @@
 Storefront preview for **Lauren / لارن** — men's clothing, Tabriz
 (Valiasr, Atlas shopping centre, GC floor · [@lauren\_\_ir](https://instagram.com/lauren__ir)).
 
-Persian RTL, dark editorial, installable as an app. Static — no server, no
-build step, no dependencies. Everything runs in the browser.
+Persian RTL, installable as an app. Static — no server, no build step, no
+dependencies, no external requests. Everything runs in the browser.
+
+## The design, in three rules
+
+**ویترین — a lit display case, not a dark lookbook.**
+
+1. **Every photograph sits in a white vitrine well with a mount margin, and is
+   never displayed large.** The store's photography is ~740px phone-grade,
+   soft when enlarged. Framed small on a light ground it reads as something
+   under glass. `.pdp__shot` caps at 560px, editorial images at 440px, and
+   `build_assets.py` never upscales past a crop's native resolution.
+   **There is no photograph in the hero at all** — it is the LAUREN chevron,
+   traced to vector, drawn as a hairline outline at architectural scale.
+2. **One angle.** The mark's legs are exactly 45° and its apex exactly 90°
+   (measured off the master art). Every chamfer on the site is that same cut.
+3. **One accent — `#C2410C`.** Sampled from the shop's own photographs, where
+   92% of the saturated colour sits in the orange band: the hangers, the
+   hand-sewn buttons, the brass rails. About three uses per screen.
+
+Persian never receives letter-spacing — it breaks Arabic-script joining.
+Tracking is a Latin-only lever, which is what `.lat` is for.
+The whole palette is checked against WCAG: no text below 4.5:1, no control
+boundary below 3:1.
 
 ---
 
@@ -15,11 +37,25 @@ build step, no dependencies. Everything runs in the browser.
 | **Catalogue** | 12 products across 3 categories, filter, sort, live search, colourway cross-links |
 | **Product** | Stacked gallery + lightbox, size picker with low-stock markers, size guide, spec accordions |
 | **Bag** | Slide-in drawer, quantity control, free-shipping progress, persists across sessions |
-| **Checkout** | Contact + address with validation, three shipping options, coupons, points redemption |
+| **Checkout** | Contact + address with validation, three shipping options, coupons, credit redemption |
 | **Payment** | Shaparak-style gateway — card grouping, expiry mask, dynamic OTP, 5-minute countdown |
-| **Account** | Phone + OTP sign-in, order history, wishlist, saved address, loyalty club |
-| **Loyalty** | Points per purchase, 4 tiers with a progress ring, redeemable at checkout |
+| **Account** | Phone + 4-box OTP, credit wallet with a ledger, orders, wishlist, address |
+| **Wallet** | Toman credit back on every order, 3 tiers by 12-month spend, redeemable at checkout |
 | **PWA** | Installs to the home screen, works offline, app shortcuts, maskable icons |
+
+### باشگاه لارن — the wallet
+
+One number, in Toman. The scheme this replaced ran on two exchange rates at
+once (10,000 Toman spent = 1 point; 1 point = 500 Toman), so every screen
+quoted a different unit and the shopper had to do arithmetic.
+
+- **Earn** a percentage of the merchandise subtotal, *after* any coupon and
+  *before* shipping — so postage never earns, and paying with credit doesn't
+  quietly shrink what the next order returns. عضو ۵٪ · نقره‌ای ۷٪ · طلایی ۱۰٪.
+- **Redeem** up to half of an order's goods, never against shipping.
+- **Tier** follows real spending in the last 12 months, not a balance, and the
+  welcome credit never counts toward it.
+- **Welcome credit** of ۲۰۰٬۰۰۰ تومان is minted once per phone number.
 
 ### The payment gateway is a simulation
 
@@ -44,10 +80,12 @@ Then open <http://localhost:8071>. Set `PORT` to use a different port.
 python3 scripts/e2e.py http://localhost:8071
 ```
 
-50 checks: every route renders, the whole browse → bag → checkout → pay →
-confirm flow, totals arithmetic, loyalty points, PWA manifest and service
-worker, Persian font loading and RTL. Needs `pip3 install playwright`
-(falls back to the system Chrome, so `playwright install` is optional).
+59 checks: every route renders, the whole browse → bag → checkout → pay →
+confirm flow, totals arithmetic, the wallet rules (earn base, redemption cap,
+welcome credit minted once per phone), PWA manifest and service worker, RTL,
+and that no Persian text carries letter-spacing. Needs
+`pip3 install playwright` (falls back to the system Chrome, so
+`playwright install` is optional).
 
 ---
 
@@ -56,7 +94,7 @@ worker, Persian font loading and RTL. Needs `pip3 install playwright`
 Almost everything the shop owner would change is in two files:
 
 - **`js/config.js`** — address, socials, shipping methods and prices, free
-  shipping threshold, coupon codes, loyalty rates, tier names and perks.
+  shipping threshold, coupon codes, wallet rates, tier names and perks.
 - **`js/data.js`** — the catalogue: titles, prices, colours, sizes,
   descriptions, fabric, size guide, FAQ.
 
@@ -92,14 +130,16 @@ css/app.css           the whole design system
 js/
   config.js           brand + shop settings      ← edit me
   data.js             catalogue                  ← edit me
-  store.js            state, bag, orders, points (localStorage)
+  store.js            state, bag, orders, credit wallet (localStorage)
   router.js           hash router
   ui.js               icons, cards, toasts, blur-up images
   bag.js              slide-in bag drawer
   views/              home, shop, product, checkout, pay, thanks, account, pages
   placeholders.js     generated — blur-up data URIs
+  brand.js            the mark as inline SVG (generated)
 scripts/
   build_assets.py     photos → catalogue images + icons
+  trace_logo.py       logo PNG → real vector (mark.svg, logo.svg)
   e2e.py              end-to-end test
 sw.js                 service worker (network-first code, cache-first media)
 manifest.webmanifest  PWA manifest
@@ -122,8 +162,11 @@ Ordered by what blocks a launch:
    are shared between customers.
 3. **Sign-in** — the OTP is generated and shown on screen. Swap it for a real
    SMS provider (کاوه‌نگار، قاصدک) with server-side verification.
-4. **Photography** — replace the recoloured variants with real shots, and
-   consider a proper white-background studio set for the catalogue grid.
+4. **Photography** — this is the single biggest lever left. The whole design
+   is built to flatter ~740px phone grabs, but a proper shoot (even an iPhone
+   on a tripod against a plain wall, in daylight) would let the images be
+   shown large, which is what a clothing site wants to do. Replace the
+   recoloured colourways with real shots at the same time.
 5. **Analytics + SEO** — hash routes are invisible to search engines. If
    organic search matters, move to real paths with server rewrites.
 

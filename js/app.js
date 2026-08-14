@@ -6,6 +6,7 @@ import { bagCount, subscribe } from './store.js';
 import { ICON, reveal, settleImages } from './ui.js';
 import { initBag, openBag } from './bag.js';
 import { $, $$, scrollTop, esc } from './util.js';
+import { logoSvg, markSvg } from './brand.js';
 
 import home from './views/home.js';
 import shop from './views/shop.js';
@@ -29,29 +30,13 @@ const NAV = [
 function chrome() {
   document.body.insertAdjacentHTML('afterbegin', `
   <div class="topbar">
-  <div class="ribbon" aria-hidden="true">
-    <div class="ribbon__track">
-      ${Array(2).fill(`
-        <span>ارسال رایگان بالای ۵٬۰۰۰٬۰۰۰ تومان</span>
-        <span><b>·</b></span>
-        <span>تعویض سایز تا ۷ روز</span>
-        <span><b>·</b></span>
-        <span>پیک همان روز در تبریز</span>
-        <span><b>·</b></span>
-        <span>هر خرید = امتیاز باشگاه لارن</span>
-        <span><b>·</b></span>`).join('')}
-    </div>
-  </div>
-
   <header class="hdr">
     <div class="hdr__in">
       <nav class="nav">
         ${NAV.map((n) => `<a href="${n.href}">${esc(n.label)}</a>`).join('')}
       </nav>
       <button class="iconbtn burger" data-menu aria-label="منو">${ICON.menu}</button>
-      <a class="hdr__mark" href="#/" aria-label="${BRAND.name}">
-        <img src="assets/brand/logo-bone.png" alt="${BRAND.name}">
-      </a>
+      <a class="hdr__mark" href="#/" aria-label="${BRAND.name}">${logoSvg({ label: BRAND.name })}</a>
       <div class="hdr__act">
         <a class="iconbtn" href="#/shop" aria-label="جست‌وجو">${ICON.search}</a>
         <a class="iconbtn" href="#/account?tab=wish" aria-label="علاقه‌مندی‌ها">${ICON.heart}</a>
@@ -81,8 +66,8 @@ function chrome() {
     <div class="wrap">
       <div class="ft__grid">
         <div>
-          <img class="ft__logo" src="assets/brand/logo-bone.png" alt="${BRAND.name}">
-          <p class="tiny" style="max-width:34ch">${esc(BRAND.taglineFa)} — منتخبی از بهترین برندهای ترکیه، در قلب تبریز.</p>
+          <div class="ft__logo">${logoSvg({ label: BRAND.name })}</div>
+          <p class="t-fine" style="max-width:34ch">${esc(BRAND.taglineFa)} — منتخبی از بهترین برندهای ترکیه، در قلب تبریز.</p>
           <div class="socials">
             <a href="https://instagram.com/${BRAND.instagram}" target="_blank" rel="noopener" aria-label="اینستاگرام">${ICON.insta}</a>
             <a href="https://wa.me/${BRAND.whatsapp}" target="_blank" rel="noopener" aria-label="واتساپ">${ICON.wa}</a>
@@ -134,7 +119,7 @@ function chrome() {
   </nav>
 
   <div class="a2hs" data-a2hs>
-    <img src="assets/icons/icon-192.png" alt="">
+    <img src="assets/icons/icon-192.png" alt="" width="40" height="40">
     <div style="flex:1">
       <b>لارن را روی گوشی نصب کنید</b>
       <p>دسترسی سریع، حتی بدون اینترنت.</p>

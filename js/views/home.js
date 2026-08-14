@@ -1,15 +1,23 @@
 // LAUREN — home.
+//
+// No photograph anywhere above the fold. The first screen is the mark itself,
+// drawn as a hairline outline at architectural scale with its apex aimed at the
+// primary button — pure vector, so it is sharp on any display, which the
+// store's 740px phone photography is not.
 
 import { BRAND, SHOP } from '../config.js';
 import { PRODUCTS, CATEGORIES, EDITORIAL } from '../data.js';
 import { productCard, bindCards, photo, ICON, reveal } from '../ui.js';
-import { toman, esc } from '../util.js';
+import { markSvg } from '../brand.js';
+import { toman, tomanRound, esc, $$ } from '../util.js';
 
 const pick = (ids) => ids.map((id) => PRODUCTS.find((p) => p.id === id)).filter(Boolean);
 
 const catTile = (c, img, i) => `
   <a class="card rv rv-d${i}" href="#/shop?cat=${c.id}">
-    <div class="card__media">${photo(img, c.name, { sizes: '(max-width:719px) 50vw, 25vw' })}</div>
+    <div class="card__well"><div class="card__img">
+      ${photo(img, c.name, { sizes: '(max-width:759px) 45vw, 22vw' })}
+    </div></div>
     <div class="card__body">
       <h3 class="card__title">${esc(c.name)}</h3>
       <span class="card__meta lat">${esc(c.sub)}</span>
@@ -18,11 +26,13 @@ const catTile = (c, img, i) => `
 
 const edBlock = (e, flip) => `
   <div class="ed ${flip ? 'ed--flip' : ''}">
-    <div class="ed__media rv">${photo(e.image, e.title.replace('\n', ' '), { sizes: '(max-width:899px) 100vw, 50vw' })}</div>
+    <div class="rv"><div class="vit">
+      <div class="vit__img">${photo(e.image, e.title.replace('\n', ' '), { sizes: '(max-width:899px) 90vw, 44vw' })}</div>
+    </div></div>
     <div class="ed__body rv rv-d1">
-      <span class="eyebrow-fa">${esc(e.kicker)}</span>
-      <h2 class="h-sec" style="margin-block-start:14px">${esc(e.title)}</h2>
-      <p class="lede">${esc(e.body)}</p>
+      <span class="eyebrow">${esc(e.kicker)}</span>
+      <h2 class="t-h1" style="margin-block-start:var(--s3)">${esc(e.title)}</h2>
+      <p class="t-lede">${esc(e.body)}</p>
       <a class="btn btn--ghost" href="${e.cta.href}">${esc(e.cta.label)}</a>
     </div>
   </div>`;
@@ -30,63 +40,52 @@ const edBlock = (e, flip) => `
 export default function home() {
   const fresh = pick(['polo-steel', 'polo-jade', 'knit-ivory', 'set-olive']);
   const loved = pick(['polo-noir', 'set-cacao', 'polo-collar', 'set-onyx']);
+  const memberRate = Math.round(SHOP.tiers[0].rate * 100);
 
   const html = `
   <section class="hero">
-    <div class="hero__bg">
-      <img src="assets/brand/hero.jpg" alt="" fetchpriority="high" decoding="async">
-    </div>
+    <div class="hero__mark" aria-hidden="true">${markSvg({ fill: false, label: '' })}</div>
     <div class="hero__in wrap">
-      <img class="hero__mark" src="assets/brand/mark-bone.png" alt="${BRAND.name}">
-      <span class="eyebrow lat">Summer ’26 Collection</span>
-      <h1 class="display" style="margin-block-start:18px">
-        لباسِ ماندگار،<br>استایلِ بی‌پایان
-      </h1>
-      <p class="hero__sub lede">
-        منتخبی از بهترین برندهای ترکیه، انتخاب‌شده تکه‌به‌تکه در تبریز.
-        هر روز یک استایل تازه — یک ورژن بهتر از دیروز.
+      <span class="label">Tabriz · Since ’۱۴۰۰</span>
+      <h1 class="t-display">لباسِ ماندگار،<br>استایلِ بی‌پایان</h1>
+      <p class="hero__sub t-lede">
+        دوازده قطعه‌ی انتخاب‌شده از بهترین دوخت‌های ترکیه. کم، اما درست —
+        هر تکه را از نزدیک دیده‌ایم و پوشیده‌ایم.
       </p>
       <div class="hero__cta">
-        <a class="btn" href="#/shop">دیدن کالکشن</a>
-        <a class="btn btn--ghost" href="#/shop?cat=set">ست‌های کامل</a>
+        <a class="btn btn--lg" href="#/shop">دیدن کالکشن</a>
+        <a class="btn btn--ghost btn--lg" href="#/contact">فروشگاه در اطلس</a>
       </div>
-    </div>
-    <div class="hero__meta">
-      <span class="lat">TABRIZ · ATLAS GC</span>
-      <span class="lat">EST. LAUREN</span>
-      <span class="lat">${BRAND.followers} FOLLOWERS</span>
-    </div>
-    <div class="scrollcue"><span class="lat">SCROLL</span><i></i></div>
-  </section>
 
-  <section class="band">
-    <div class="band__track">
-      ${Array(2).fill(`<span>پولوشرت</span><b>·</b><span>بافت</span><b>·</b><span>ست کامل</span><b>·</b><span class="lat">TURKISH MADE</span><b>·</b><span>ارسال به سراسر ایران</span><b>·</b>`).join('')}
+      <div class="hero__foot t-fine">
+        <span>ارسال رایگان بالای ${tomanRound(SHOP.freeShippingOver)}</span>
+        <span>تعویض سایز تا ۷ روز</span>
+        <span>بازگشت ${memberRate}٪ اعتبار</span>
+        <span class="lat">${BRAND.followers} FOLLOWERS</span>
+      </div>
     </div>
   </section>
 
   <section class="sec wrap">
     <div class="sec__head">
       <div>
-        <span class="eyebrow-fa">تازه رسیده‌ها</span>
-        <h2 class="h-sec" style="margin-block-start:12px">آخرین اضافه‌های این هفته</h2>
+        <span class="eyebrow">تازه رسیده‌ها</span>
+        <h2 class="t-h1">آخرین اضافه‌های این هفته</h2>
       </div>
-      <a class="link-u" href="#/shop">همه‌ی محصولات ${ICON.back}</a>
+      <a class="link" href="#/shop">همه‌ی دوازده قطعه ${ICON.back}</a>
     </div>
     <div class="grid" data-cards>
-      ${fresh.map((p, i) => `<div class="rv rv-d${i}">${productCard(p, { eager: i < 2 })}</div>`).join('')}
+      ${fresh.map((p, i) => `<div class="rv rv-d${i % 3}">${productCard(p, { eager: i < 2 })}</div>`).join('')}
     </div>
   </section>
 
-  <section class="sec sec--tight wrap">
-    ${edBlock(EDITORIAL[0], false)}
-  </section>
+  <section class="sec sec--tight wrap">${edBlock(EDITORIAL[0], false)}</section>
 
   <section class="sec wrap">
     <div class="sec__head">
       <div>
-        <span class="eyebrow-fa">دسته‌بندی</span>
-        <h2 class="h-sec" style="margin-block-start:12px">از کجا شروع کنیم؟</h2>
+        <span class="eyebrow">دسته‌بندی</span>
+        <h2 class="t-h1">از کجا شروع کنیم؟</h2>
       </div>
     </div>
     <div class="grid">
@@ -97,76 +96,75 @@ export default function home() {
     </div>
   </section>
 
-  <section class="sec sec--tight wrap">
-    ${edBlock(EDITORIAL[1], true)}
-  </section>
+  <section class="sec sec--tight wrap">${edBlock(EDITORIAL[1], true)}</section>
 
   <section class="sec wrap">
     <div class="sec__head">
       <div>
-        <span class="eyebrow-fa">محبوب‌ترین‌ها</span>
-        <h2 class="h-sec" style="margin-block-start:12px">آنچه بیشتر می‌بریدشان</h2>
+        <span class="eyebrow">محبوب‌ترین‌ها</span>
+        <h2 class="t-h1">آنچه بیشتر می‌بریدشان</h2>
       </div>
-      <a class="link-u" href="#/shop?sort=best">پرفروش‌ها ${ICON.back}</a>
+      <a class="link" href="#/shop?sort=best">پرفروش‌ها ${ICON.back}</a>
     </div>
     <div class="grid" data-cards>
-      ${loved.map((p, i) => `<div class="rv rv-d${i}">${productCard(p)}</div>`).join('')}
+      ${loved.map((p, i) => `<div class="rv rv-d${i % 3}">${productCard(p)}</div>`).join('')}
     </div>
   </section>
 
   <section class="sec wrap">
-    <div class="ed">
-      <div class="ed__media rv" style="aspect-ratio:1/1;background:var(--ink-1);display:grid;place-items:center;border:1px solid var(--line)">
-        <div style="text-align:center;padding:40px">
-          <div style="color:var(--brass);margin-inline:auto;width:34px">${ICON.spark}</div>
-          <h3 style="font-size:clamp(22px,3vw,30px);font-weight:300;margin-block:18px 10px">باشگاه لارن</h3>
-          <p class="tiny" style="max-width:30ch;margin-inline:auto">
-            هر ۱۰٬۰۰۰ تومان خرید = ۱ امتیاز. هر امتیاز = ${toman(SHOP.points.tomanPerPoint)} اعتبار برای خرید بعدی.
-          </p>
-        </div>
-      </div>
-      <div class="ed__body rv rv-d1">
-        <span class="eyebrow-fa">عضویت رایگان</span>
-        <h2 class="h-sec" style="margin-block-start:14px">خرید کنید،<br>امتیاز جمع کنید</h2>
-        <p class="lede">
-          با هر خرید امتیاز می‌گیرید و هرچه بالاتر بروید، مزایای بیشتری باز می‌شود —
-          از ارسال رایگان دائمی تا دسترسی زودهنگام به کالکشن‌های تازه.
+    <div class="wallet rv">
+      <div class="wallet__mark" aria-hidden="true">${markSvg({ label: '' })}</div>
+      <div style="position:relative;z-index:1;max-width:52ch">
+        <span class="wallet__label">کیف اعتبار لارن</span>
+        <h2 class="t-h1" style="margin-block:var(--s2) var(--s4);color:inherit">
+          ${memberRate}٪ هر خرید، برمی‌گردد
+        </h2>
+        <p style="color:rgba(237,239,234,.72);font-size:15px">
+          نه امتیاز، نه واحد عجیب — اعتبارِ شما به تومان است و در خرید بعدی
+          مستقیم کم می‌شود. هرچه بیشتر بخرید، درصد برگشت بالاتر می‌رود.
         </p>
-        <ul style="display:grid;gap:12px;margin-block-end:30px">
+        <ul style="display:grid;gap:var(--s3);margin-block:var(--s5)">
           ${SHOP.tiers.map((t) => `
-            <li style="display:flex;gap:12px;align-items:center;font-size:13.5px;color:var(--bone-2)">
-              <span style="width:8px;height:8px;border-radius:50%;background:var(--brass);flex:none;opacity:.75"></span>
-              <b style="font-weight:500;color:var(--bone);min-width:64px">${esc(t.name)}</b>
+            <li style="display:flex;gap:var(--s3);align-items:baseline;font-size:14px;color:rgba(237,239,234,.78)">
+              <b style="min-width:74px;font-weight:500;color:#EDEFEA">${esc(t.name)}</b>
+              <span class="num" style="color:#E8895F;min-width:38px">${Math.round(t.rate * 100)}٪</span>
               <span>${esc(t.perk)}</span>
             </li>`).join('')}
         </ul>
-        <a class="btn btn--brass" href="#/account">${SHOP.points.signupBonus} امتیاز هدیه‌ی عضویت</a>
+        <a class="btn btn--thread" href="#/account">${toman(SHOP.wallet.welcome)} هدیه‌ی عضویت</a>
       </div>
     </div>
   </section>
 
   <section class="sec sec--tight wrap">
-    <div class="panel rv" style="display:grid;gap:26px;grid-template-columns:1fr">
-      <div style="display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr))">
-        ${[
-          [ICON.truck, 'ارسال سریع', `پیک همان روز در تبریز · ارسال رایگان بالای ${toman(SHOP.freeShippingOver)}`],
-          [ICON.swap, 'تعویض سایز رایگان', 'تا ۷ روز پس از تحویل، هزینه‌ی برگشت با ما'],
-          [ICON.shield, 'پرداخت امن', 'درگاه‌های مستقیم بانکی، بدون واسطه'],
-          [ICON.pin, 'فروشگاه حضوری', BRAND.addressShort],
-        ].map(([ic, t, s]) => `
-          <div style="display:flex;gap:13px;align-items:flex-start">
-            <span style="width:20px;color:var(--brass);flex:none;margin-block-start:2px">${ic}</span>
-            <div>
-              <b style="display:block;font-size:13.5px;font-weight:500">${esc(t)}</b>
-              <span class="tiny">${esc(s)}</span>
-            </div>
-          </div>`).join('')}
-      </div>
+    <div class="rv" style="display:grid;gap:var(--s5);grid-template-columns:repeat(auto-fit,minmax(210px,1fr))">
+      ${[
+        [ICON.truck, 'ارسال سریع', `پیک همان روز در تبریز · رایگان بالای ${tomanRound(SHOP.freeShippingOver)}`],
+        [ICON.swap, 'تعویض سایز رایگان', 'تا ۷ روز پس از تحویل، هزینه‌ی برگشت با ما'],
+        [ICON.shield, 'پرداخت امن', 'درگاه مستقیم بانکی، بدون واسطه'],
+        [ICON.pin, 'فروشگاه حضوری', BRAND.addressShort],
+      ].map(([ic, t, sub]) => `
+        <div style="display:flex;gap:var(--s3);align-items:flex-start">
+          <span style="width:19px;color:var(--thread);flex:none;margin-block-start:3px">${ic}</span>
+          <div>
+            <b style="display:block;font-size:14px;font-weight:500">${esc(t)}</b>
+            <span class="t-fine">${esc(sub)}</span>
+          </div>
+        </div>`).join('')}
     </div>
   </section>`;
 
   return {
     html,
-    mount(root) { bindCards(root); reveal(root); },
+    mount(root) {
+      bindCards(root);
+      reveal(root);
+      // Give each stroke its own length so the draw-on animation finishes
+      // together instead of the short segments racing ahead.
+      $$('.hero__mark path', root).forEach((path) => {
+        const len = path.getTotalLength?.() || 4000;
+        path.style.setProperty('--len', Math.ceil(len));
+      });
+    },
   };
 }

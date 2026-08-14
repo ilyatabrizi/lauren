@@ -11,7 +11,7 @@ export default function thanks(ctx) {
   const o = state.orders.find((x) => x.id === id) || state.orders[0];
 
   if (!o) {
-    return { html: `<div class="wrap empty" style="padding-block-start:calc(var(--top-h) + 70px)">
+    return { html: `<div class="wrap empty page-top">
       <h3>سفارشی پیدا نشد</h3>
       <a class="btn btn--ghost btn--sm" href="#/shop" style="margin-block-start:18px">دیدن کالکشن</a>
     </div>` };
@@ -20,7 +20,7 @@ export default function thanks(ctx) {
   const ship = SHOP.shipping.find((s) => s.id === o.shippingId);
 
   const html = `
-  <div class="wrap" style="padding-block-start:calc(var(--top-h) + 30px);max-width:820px">
+  <div class="wrap page-top" style="max-width:820px">
     ${steps(3)}
 
     <div class="rv in" style="text-align:center;padding-block:20px 34px">
@@ -28,8 +28,8 @@ export default function thanks(ctx) {
                   display:grid;place-items:center;margin-inline:auto;color:var(--ok)">
         <span style="width:28px">${ICON.check}</span>
       </div>
-      <h1 class="h-sec" style="margin-block:22px 12px">سفارش شما ثبت شد</h1>
-      <p class="lede" style="max-width:44ch;margin-inline:auto">
+      <h1 class="t-h1" style="margin-block:22px 12px">سفارش شما ثبت شد</h1>
+      <p class="t-lede" style="max-width:44ch;margin-inline:auto">
         ممنون که ${esc(BRAND.nameFa)} را انتخاب کردید. جزئیات سفارش برای شماره‌ی
         <span class="lat" dir="ltr">${esc(o.address?.phone || state.user?.phone || '')}</span> پیامک می‌شود.
       </p>
@@ -40,7 +40,7 @@ export default function thanks(ctx) {
         <div class="stat"><b class="lat" style="font-size:17px">${esc(o.id)}</b><span>شماره سفارش</span></div>
         <div class="stat"><b class="lat" style="font-size:17px">${esc(o.ref)}</b><span>کد پیگیری پرداخت</span></div>
         <div class="stat"><b style="font-size:17px">${toman(o.totals.grand)}</b><span>مبلغ پرداخت‌شده</span></div>
-        <div class="stat"><b style="font-size:17px;color:var(--brass)">+${o.earned}</b><span>امتیاز دریافتی</span></div>
+        <div class="stat"><b style="font-size:17px;color:var(--thread)">+${toman(o.earned)}</b><span>اعتبار دریافتی</span></div>
       </div>
     </div>
 
@@ -50,14 +50,15 @@ export default function thanks(ctx) {
         ${o.items.map((i) => `
           <div class="miniline">
             <img src="assets/products/${i.img}.jpg" alt="" loading="lazy">
-            <div>${esc(i.title)}<span style="display:block">${esc(i.color)} · سایز <span class="lat">${esc(i.size)}</span> · ${i.qty} عدد</span></div>
+            <div>${esc(i.title)}<span>${esc(i.color)} · سایز <bdi class="lat">${esc(i.size)}</bdi>${
+              i.qty > 1 ? ` — <bdi class="num">${i.qty}</bdi> عدد` : ''}</span></div>
             <b style="font-weight:500;white-space:nowrap">${toman(i.price * i.qty)}</b>
           </div>`).join('')}
       </div>
       <div class="sums" style="margin-block:20px 0">
         <div><span>جمع کالاها</span><span>${toman(o.totals.sub)}</span></div>
         ${o.totals.couponOff ? `<div class="save"><span>کد تخفیف</span><span>−${toman(o.totals.couponOff)}</span></div>` : ''}
-        ${o.totals.pointsOff ? `<div class="save"><span>امتیاز باشگاه</span><span>−${toman(o.totals.pointsOff)}</span></div>` : ''}
+        ${o.totals.creditUsed ? `<div class="save"><span>اعتبار باشگاه</span><span>−${toman(o.totals.creditUsed)}</span></div>` : ''}
         <div><span>ارسال</span><span>${o.totals.shipCost ? toman(o.totals.shipCost) : 'رایگان'}</span></div>
         <div class="tot"><span>پرداخت‌شده</span><b>${toman(o.totals.grand)}</b></div>
       </div>
@@ -78,9 +79,9 @@ export default function thanks(ctx) {
       <a class="btn btn--ghost" href="#/shop">ادامه‌ی خرید</a>
     </div>
 
-    <p class="tiny" style="text-align:center;margin-block-start:24px">
+    <p class="t-fine" style="text-align:center;margin-block-start:24px">
       سوالی دارید؟ در واتساپ پیام بدهید —
-      <a class="lat" dir="ltr" style="color:var(--brass)"
+      <a class="lat" dir="ltr" style="color:var(--thread)"
          href="https://wa.me/${BRAND.whatsapp}" target="_blank" rel="noopener">+${BRAND.whatsapp}</a>
     </p>
   </div>`;

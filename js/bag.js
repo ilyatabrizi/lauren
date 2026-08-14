@@ -41,11 +41,11 @@ function lineHtml(l) {
   return `
   <div class="line" data-line="${p.id}|${l.size}">
     <a class="line__img" href="#/p/${p.id}" data-nav>
-      ${photo(p.gallery[0], p.title, { cls: '' })}
+      <div>${photo(p.gallery[0], p.title)}</div>
     </a>
     <div>
       <a class="line__t" href="#/p/${p.id}" data-nav>${esc(p.title)}</a>
-      <div class="line__m">${esc(p.colorName)} · سایز <span class="lat">${esc(l.size)}</span></div>
+      <div class="line__m">${esc(p.colorName)} · سایز <bdi class="lat">${esc(l.size)}</bdi></div>
       <div class="line__r">
         <div class="qty">
           <button data-dec aria-label="کاهش">${ICON.minus}</button>
@@ -54,7 +54,7 @@ function lineHtml(l) {
         </div>
         <div style="display:flex;align-items:center;gap:12px">
           <b style="font-size:13.5px;font-weight:500">${toman(p.price * l.qty)}</b>
-          <button data-del aria-label="حذف" style="color:var(--bone-3);width:16px">${ICON.trash}</button>
+          <button data-del aria-label="حذف" style="color:var(--faint);width:16px">${ICON.trash}</button>
         </div>
       </div>
     </div>
@@ -67,13 +67,13 @@ export function paintBag() {
 
   if (!t.lines.length) {
     body.innerHTML = `
-      <div class="empty" style="padding-block:70px">
+      <div class="empty">
         ${ICON.bag}
         <h3>سبد خالی است</h3>
-        <p class="tiny" style="max-width:28ch;margin-inline:auto">
+        <p class="t-small" style="max-width:28ch;margin-inline:auto">
           هنوز چیزی اضافه نکرده‌اید. کالکشن این فصل منتظر شماست.
         </p>
-        <a class="btn btn--ghost btn--sm" href="#/shop" data-nav style="margin-block-start:22px">دیدن کالکشن</a>
+        <a class="btn btn--ghost btn--sm" href="#/shop" data-nav style="margin-block-start:var(--s5)">دیدن کالکشن</a>
       </div>`;
     foot.innerHTML = '';
   } else {
@@ -81,21 +81,19 @@ export function paintBag() {
     const away = SHOP.freeShippingOver - t.sub;
     foot.innerHTML = `
       ${away > 0 ? `
-        <div class="tiny" style="margin-block-end:14px;padding:11px 13px;background:var(--ink-1);border-radius:3px">
-          ${toman(away)} دیگر تا <b style="color:var(--brass);font-weight:500">ارسال رایگان</b>
-          <div style="height:2px;background:var(--ink-3);border-radius:99px;margin-block-start:9px;overflow:hidden">
-            <i style="display:block;height:100%;width:${Math.min(100, t.sub / SHOP.freeShippingOver * 100)}%;background:var(--brass)"></i>
-          </div>
+        <div class="t-fine" style="margin-block-end:var(--s4)">
+          ${toman(away)} دیگر تا <b style="color:var(--thread);font-weight:500">ارسال رایگان</b>
+          <div class="meter"><i style="width:${Math.min(100, t.sub / SHOP.freeShippingOver * 100)}%"></i></div>
         </div>` : `
-        <div class="tiny" style="margin-block-end:14px;color:var(--brass)">✓ این سفارش ارسال رایگان دارد</div>`}
+        <div class="t-fine" style="margin-block-end:var(--s4);color:var(--thread)">این سفارش ارسال رایگان دارد</div>`}
       <div class="sums">
         ${t.savedOnList ? `<div class="save"><span>سود شما از تخفیف‌ها</span><span>${toman(t.savedOnList)}</span></div>` : ''}
         <div class="tot"><span>جمع کل</span><b>${toman(t.sub)}</b></div>
       </div>
       <a class="btn btn--block btn--lg" href="#/checkout" data-nav>تسویه حساب</a>
-      <button class="btn btn--ghost btn--block btn--sm" data-close2 style="margin-block-start:8px">ادامه‌ی خرید</button>
-      <p class="tiny" style="text-align:center;margin-block-start:12px">
-        با این خرید ${t.earns} امتیاز می‌گیرید
+      <button class="btn btn--ghost btn--block btn--sm" data-close2 style="margin-block-start:var(--s2)">ادامه‌ی خرید</button>
+      <p class="t-fine" style="text-align:center;margin-block-start:var(--s3)">
+        ${toman(t.earns)} اعتبار از این خرید برمی‌گردد
       </p>`;
   }
 

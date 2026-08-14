@@ -57,10 +57,10 @@ CROPS = {
     "polo-jade":           ("src2", (60, 170, 660, 920)),
     "polo-jade--detail":   ("src2", (40, 560, 440, 1060)),
     "polo-collar":         ("src2", (190, 0, 762, 715)),
-    "polo-collar--detail": ("src2", (210, 20, 530, 420)),
+    "polo-collar--detail": ("src2", (120, 330, 520, 830)),
     # src3 760x1076 — ivory ribbed knit, rust trim
     "knit-ivory":          ("src3", (180, 20, 740, 720)),
-    "knit-ivory--detail":  ("src3", (250, 100, 570, 500)),
+    "knit-ivory--detail":  ("src3", (200, 400, 560, 850)),
     # src4 740x1146 — onyx jacquard polo styled with the ivory trouser
     "set-onyx":            ("src4", (40, 190, 640, 940)),
     "set-onyx--detail":    ("src4", (200, 250, 520, 650)),
@@ -203,7 +203,19 @@ def retouch(im, ops):
 
 
 def fit(im, size):
-    return ImageOps.fit(im, size, method=Image.LANCZOS, centering=(0.5, 0.5))
+    """Frame to `size` — but never enlarge past what the crop actually holds.
+
+    The source frames are ~740px phone grabs, so a crop can be as little as
+    420px across. Rendering that at 1200px invents no detail; it just bakes in
+    interpolation mush and makes the JPEG bigger. Cap at native and let the
+    browser do the downscale, which is where sharpness actually comes from.
+    """
+    tw, th = size
+    scale = min(1.0, im.width / tw, im.height / th)
+    target = (max(2, round(tw * scale)), max(2, round(th * scale)))
+    out = ImageOps.fit(im, target, method=Image.LANCZOS, centering=(0.5, 0.5))
+    # a whisker of unsharp to put back what JPEG and the downscale take off
+    return out.filter(ImageFilter.UnsharpMask(radius=1.1, percent=58, threshold=3))
 
 
 def save_jpg(im, path, quality=QUALITY):

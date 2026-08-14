@@ -1,153 +1,230 @@
-// LAUREN — account: loyalty club, orders, wishlist, addresses, profile.
+// LAUREN — account: sign in, the credit wallet, orders, wishlist, address.
 
 import { SHOP, BRAND, PREVIEW } from '../config.js';
 import { PRODUCTS } from '../data.js';
-import { state, tier, signIn, signOut, saveAddress } from '../store.js';
+import { state, tier, signIn, signOut, saveAddress, setName } from '../store.js';
 import {
   ICON, field, fieldError, readForm, toast, productCard,
   bindCards, reveal, settleImages,
 } from '../ui.js';
-import { toman, esc, faDate, validPhone, validPostal, digitsOnly, $, $$ } from '../util.js';
+import { markSvg } from '../brand.js';
+import { toman, tomanRound, esc, faDate, validPhone, validPostal, digitsOnly, $, $$ } from '../util.js';
 import { go } from '../router.js';
 
 /* ------------------------------------------------------------- sign in --- */
+// Phone first, then a four-box code. No Iranian shop asks for a name before it
+// will send a code, so the name is collected later — at checkout, where it is
+// actually needed for the delivery.
 function signInView() {
+  const rate = Math.round(SHOP.tiers[0].rate * 100);
   return {
     html: `
-    <div class="wrap" style="padding-block-start:calc(var(--top-h) + 40px);max-width:460px">
-      <div style="text-align:center;margin-block-end:32px">
-        <img src="assets/brand/mark-bone.png" alt="" style="width:52px;margin-inline:auto;opacity:.9">
-        <h1 class="h-sec" style="margin-block:22px 10px">ورود به باشگاه لارن</h1>
-        <p class="lede">با شماره‌ی موبایل وارد شوید. عضویت رایگان است و
-          ${SHOP.points.signupBonus} امتیاز خوش‌آمدگویی می‌گیرید.</p>
-      </div>
+    <div class="wrap page-top">
+      <div class="auth">
+        <div class="auth__mark">${markSvg({ label: 'LAUREN' })}</div>
+        <h1 class="t-h1" style="text-align:center;margin-block:var(--s5) var(--s3)">
+          ورود به باشگاه لارن
+        </h1>
+        <p class="t-lede" style="text-align:center">
+          فقط با شماره‌ی موبایل. عضویت رایگان است، ${toman(SHOP.wallet.welcome)}
+          اعتبار هدیه می‌گیرید و ${rate}٪ هر خرید به کیفتان برمی‌گردد.
+        </p>
 
-      <div class="panel">
-        <div class="fields" data-step1>
-          ${field('name', 'نام و نام خانوادگی', { placeholder: 'مثلاً علی رضایی' })}
-          ${field('phone', 'شماره موبایل', { placeholder: '09xxxxxxxxx', inputmode: 'numeric', maxlength: 11, dir: 'ltr' })}
-          <button class="btn btn--block btn--lg" data-send style="margin-block-start:6px">دریافت کد تایید</button>
+        <div class="panel" style="margin-block-start:var(--s6)">
+          <form data-step1 novalidate>
+            ${field('phone', 'شماره موبایل', {
+              placeholder: '09xxxxxxxxx', inputmode: 'numeric', maxlength: 11,
+              dir: 'ltr', autocomplete: 'tel',
+            })}
+            <button class="btn btn--block btn--lg" type="submit">دریافت کد تایید</button>
+          </form>
+
+          <form data-step2 hidden novalidate>
+            <p class="t-small" data-sent style="margin-block-end:var(--s4)"></p>
+            <div class="otp" data-otp>
+              ${[0, 1, 2, 3].map((i) => `
+                <input inputmode="numeric" maxlength="1" aria-label="رقم ${i + 1}"
+                       autocomplete="${i === 0 ? 'one-time-code' : 'off'}">`).join('')}
+            </div>
+            <p class="t-fine" data-otperr style="min-height:18px;color:var(--thread-d);margin-block-start:var(--s2)"></p>
+            <button class="btn btn--block btn--lg" type="submit">ورود</button>
+            <div style="display:flex;justify-content:space-between;margin-block-start:var(--s3)">
+              <button class="link" type="button" data-resend disabled>ارسال دوباره‌ی کد</button>
+              <button class="link" type="button" data-back>تغییر شماره</button>
+            </div>
+          </form>
         </div>
 
-        <div class="fields" data-step2 hidden>
-          <p class="tiny" data-sent></p>
-          ${field('otp', 'کد تایید', { placeholder: '۴ رقم', inputmode: 'numeric', maxlength: 4, dir: 'ltr' })}
-          <button class="btn btn--block btn--lg" data-verify>ورود</button>
-          <button class="btn btn--ghost btn--block btn--sm" data-back>تغییر شماره</button>
-        </div>
+        <p class="t-fine" style="text-align:center;margin-block-start:var(--s4)">
+          ${esc(PREVIEW.note)} کد تایید روی همین صفحه نشان داده می‌شود.
+        </p>
       </div>
-
-      <p class="tiny" style="text-align:center;margin-block-start:18px">
-        ${esc(PREVIEW.note)} کد تایید روی همین صفحه نمایش داده می‌شود.
-      </p>
     </div>`,
     mount(root) {
-      let code = null;
+      let code = null, timer = null;
       const s1 = $('[data-step1]', root), s2 = $('[data-step2]', root);
+      const boxes = $$('.otp input', root);
+      const resend = $('[data-resend]', root);
 
-      $('[data-send]', root).addEventListener('click', () => {
-        const f = readForm(s1);
-        let ok = true;
-        if (!f.name) { fieldError(root, 'name', 'نام را وارد کنید'); ok = false; }
-        else fieldError(root, 'name', '');
-        if (!validPhone(f.phone)) { fieldError(root, 'phone', 'شماره موبایل معتبر نیست'); ok = false; }
-        else fieldError(root, 'phone', '');
-        if (!ok) return;
-
+      const send = () => {
         code = String(Math.floor(1000 + Math.random() * 8999));
-        s1.hidden = true; s2.hidden = false;
+        const phone = $('[name="phone"]', root).value.trim();
         $('[data-sent]', root).innerHTML =
-          `کد تایید برای <span class="lat" dir="ltr">${esc(f.phone)}</span> — <b style="color:var(--brass)" class="lat">${code}</b>`;
-        $('#f-otp', root).focus();
+          `کد تایید برای <span class="lat">${esc(phone)}</span> فرستاده شد — ` +
+          `<b class="num" style="color:var(--thread)">${code}</b>`;
+        boxes.forEach((b) => { b.value = ''; b.classList.remove('bad'); });
+        boxes[0].focus();
+        let left = 60;
+        resend.disabled = true;
+        clearInterval(timer);
+        timer = setInterval(() => {
+          left--;
+          resend.textContent = left > 0 ? `ارسال دوباره تا ${left} ثانیه` : 'ارسال دوباره‌ی کد';
+          if (left <= 0) { resend.disabled = false; clearInterval(timer); }
+        }, 1000);
+        resend.textContent = `ارسال دوباره تا ${left} ثانیه`;
+      };
+
+      s1.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const phone = $('[name="phone"]', root).value.trim();
+        if (!validPhone(phone)) return fieldError(root, 'phone', 'شماره موبایل با ۰۹ شروع می‌شود و ۱۱ رقم است');
+        fieldError(root, 'phone', '');
+        s1.hidden = true; s2.hidden = false;
+        send();
       });
 
-      $('[data-back]', root).addEventListener('click', () => { s2.hidden = true; s1.hidden = false; });
+      resend.addEventListener('click', send);
+      $('[data-back]', root).addEventListener('click', () => {
+        clearInterval(timer);
+        s2.hidden = true; s1.hidden = false;
+      });
 
-      $('[data-verify]', root).addEventListener('click', () => {
-        const f = { ...readForm(s1), ...readForm(s2) };
-        if (f.otp !== code) { fieldError(root, 'otp', 'کد وارد شده درست نیست'); return; }
-        const isNew = signIn({ name: f.name, phone: digitsOnly(f.phone) });
-        toast(isNew ? `خوش آمدید! ${SHOP.points.signupBonus} امتیاز هدیه گرفتید` : 'خوش برگشتید', 'spark');
+      // one digit per box, moving forward as you type and back on delete
+      boxes.forEach((box, i) => {
+        box.addEventListener('input', () => {
+          box.value = box.value.replace(/\D/g, '').slice(0, 1);
+          box.classList.remove('bad');
+          if (box.value && i < boxes.length - 1) boxes[i + 1].focus();
+          if (boxes.every((b) => b.value)) s2.requestSubmit();
+        });
+        box.addEventListener('keydown', (e) => {
+          if (e.key === 'Backspace' && !box.value && i > 0) boxes[i - 1].focus();
+        });
+        box.addEventListener('paste', (e) => {
+          const digits = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 4);
+          if (!digits) return;
+          e.preventDefault();
+          digits.split('').forEach((d, k) => { if (boxes[k]) boxes[k].value = d; });
+          boxes[Math.min(digits.length, 3)].focus();
+          if (boxes.every((b) => b.value)) s2.requestSubmit();
+        });
+      });
+
+      s2.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const entered = boxes.map((b) => b.value).join('');
+        if (entered !== code) {
+          boxes.forEach((b) => b.classList.add('bad'));
+          $('[data-otperr]', root).textContent = 'کد وارد شده درست نیست';
+          boxes[0].focus();
+          return;
+        }
+        clearInterval(timer);
+        const gifted = signIn({ phone: $('[name="phone"]', root).value.trim() });
+        toast(gifted ? `خوش آمدید — ${toman(SHOP.wallet.welcome)} اعتبار هدیه گرفتید` : 'خوش برگشتید', 'spark');
         go('/account');
       });
+
+      root.addEventListener('lauren:unmount', () => clearInterval(timer), { once: true });
     },
   };
 }
 
-/* ---------------------------------------------------------------- club --- */
-function clubPanel() {
-  const { tier: t, next, progress } = tier();
-  const R = 62, C = 2 * Math.PI * R;
-  const spent = state.orders.reduce((n, o) => n + o.totals.grand, 0);
+/* ---------------------------------------------------------------- wallet -- */
+function walletPanel() {
+  const { tier: t, next, toNext, progress, rate } = tier();
+  const spent = state.orders.reduce((n, o) => n + o.totals.goods, 0);
 
   return `
-  <div class="panel">
-    <div class="tierwrap">
-      <div class="ring">
-        <svg width="138" height="138" viewBox="0 0 138 138">
-          <circle class="bg" cx="69" cy="69" r="${R}"></circle>
-          <circle class="fg" cx="69" cy="69" r="${R}"
-                  stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - progress)}"></circle>
-        </svg>
-        <div class="ring__c"><b>${state.points}</b><span>امتیاز</span></div>
+  <div class="wallet">
+    <div class="wallet__mark" aria-hidden="true">${markSvg({ label: '' })}</div>
+    <span class="wallet__label">اعتبار قابل استفاده</span>
+    <div class="wallet__amt">${toman(state.credit)}</div>
+    <div class="wallet__row">
+      <div class="wallet__stat">
+        <b>${esc(t.name)}</b><span>سطح شما · ${Math.round(rate * 100)}٪ برگشت</span>
       </div>
-      <div>
-        <span class="eyebrow-fa">سطح شما</span>
-        <h2 style="font-size:26px;font-weight:300;margin-block:8px 6px">${esc(t.name)}</h2>
-        <p class="tiny" style="max-width:36ch">${esc(t.perk)}</p>
-        <div class="tierbar">
-          <div class="tierbar__track"><div class="tierbar__fill" style="width:${progress * 100}%"></div></div>
-          <div class="tierbar__marks">
-            ${SHOP.tiers.map((x) => `<b class="${state.lifetime >= x.min ? 'on' : ''}">${esc(x.name)}</b>`).join('')}
-          </div>
-        </div>
-        ${next ? `<p class="tiny" style="margin-block-start:12px">
-          ${next.min - state.lifetime} امتیاز تا سطح ${esc(next.name)} — ${esc(next.perk)}
-        </p>` : `<p class="tiny" style="margin-block-start:12px;color:var(--brass)">بالاترین سطح باشگاه</p>`}
+      <div class="wallet__stat">
+        <b>${toman(spent)}</b><span>خرید شما تا امروز</span>
       </div>
+    </div>
+    <div class="ladder">
+      <div class="ladder__track"><div class="ladder__fill" style="width:${progress * 100}%"></div></div>
+      <div class="ladder__marks">
+        ${SHOP.tiers.map((x) => `
+          <b class="${state.spend12 >= x.minSpend ? 'on' : ''}">${esc(x.name)} · ${Math.round(x.rate * 100)}٪</b>
+        `).join('')}
+      </div>
+      <p style="font-size:12.5px;color:rgba(237,239,234,.6)">
+        ${next
+          ? `${toman(toNext)} خرید دیگر تا سطح ${esc(next.name)} — ${esc(next.perk)}`
+          : 'بالاترین سطح باشگاه'}
+      </p>
     </div>
   </div>
 
-  <div class="panel">
-    <div class="stats">
-      <div class="stat"><b>${toman(state.points * SHOP.points.tomanPerPoint)}</b><span>اعتبار قابل استفاده</span></div>
-      <div class="stat"><b>${state.orders.length}</b><span>سفارش ثبت‌شده</span></div>
-      <div class="stat"><b>${toman(spent)}</b><span>مجموع خرید</span></div>
-      <div class="stat"><b>${state.lifetime}</b><span>امتیاز مادام‌العمر</span></div>
+  <div class="panel" style="margin-block-start:var(--s3)">
+    <h3>قانون‌های باشگاه</h3>
+    <div class="trust">
+      <div>${ICON.spark}<span><b>${Math.round(rate * 100)}٪ از هر خرید</b> به‌صورت اعتبار به کیف شما برمی‌گردد — روی مبلغ کالاها، بدون هزینه‌ی ارسال.</span></div>
+      <div>${ICON.card}<span>در هر سفارش تا <b>نصف مبلغ کالاها</b> را می‌توانید با اعتبار بپردازید.</span></div>
+      <div>${ICON.box}<span>سطح شما با <b>خرید ۱۲ ماه گذشته</b> تعیین می‌شود، نه با موجودی کیف.</span></div>
+      <div>${ICON.clock}<span>اعتبار تا <b>${SHOP.wallet.expiryMonths} ماه</b> پس از دریافت معتبر است.</span></div>
     </div>
-    <p class="tiny" style="margin-block-start:22px;padding-block-start:18px;border-block-start:1px solid var(--line)">
-      هر ${toman(SHOP.points.perToman)} خرید = ۱ امتیاز · هر امتیاز = ${toman(SHOP.points.tomanPerPoint)} اعتبار.
-      امتیازها هنگام تسویه‌حساب قابل استفاده‌اند.
-    </p>
-  </div>`;
+  </div>
+
+  ${state.ledger.length ? `
+  <div class="panel" style="margin-block-start:var(--s3)">
+    <h3>گردش اعتبار</h3>
+    <div class="ledger">
+      ${state.ledger.slice(0, 12).map((r) => `
+        <div class="ledger__row">
+          <div>${esc(r.note)}<span>${esc(faDate(r.ts))}${r.ref ? ` · <span class="lat">${esc(r.ref)}</span>` : ''}</span></div>
+          <div class="ledger__amt ${r.amount >= 0 ? 'plus' : 'minus'}">
+            ${r.amount >= 0 ? '+' : '−'}${toman(Math.abs(r.amount))}
+          </div>
+        </div>`).join('')}
+    </div>
+  </div>` : ''}`;
 }
 
 /* -------------------------------------------------------------- orders --- */
 function ordersPanel() {
   if (!state.orders.length) {
-    return `<div class="empty" style="padding-block:60px">${ICON.box}
+    return `<div class="empty">${ICON.box}
       <h3>هنوز سفارشی ندارید</h3>
-      <a class="btn btn--ghost btn--sm" href="#/shop" style="margin-block-start:18px">شروع خرید</a></div>`;
+      <p class="t-small" style="max-width:30ch;margin-inline:auto">وقتی اولین سفارش را ثبت کنید، اینجا پیدایش می‌کنید.</p>
+      <a class="btn btn--ghost btn--sm" href="#/shop" style="margin-block-start:var(--s5)">شروع خرید</a></div>`;
   }
   return state.orders.map((o) => `
     <div class="order">
       <div class="order__hd">
         <div>
           <div class="order__id">${esc(o.id)}</div>
-          <div class="tiny">${esc(faDate(o.ts))} · ${o.items.reduce((n, i) => n + i.qty, 0)} قلم</div>
+          <div class="t-fine">${esc(faDate(o.ts))} · ${o.items.reduce((n, i) => n + i.qty, 0)} قلم</div>
         </div>
         <div style="text-align:end">
           <span class="order__st ok">پرداخت‌شده</span>
-          <div style="margin-block-start:8px;font-size:14px">${toman(o.totals.grand)}</div>
+          <div style="margin-block-start:var(--s2);font-size:14px">${toman(o.totals.grand)}</div>
         </div>
       </div>
       <div class="order__thumbs">
-        ${o.items.map((i) => `<img src="assets/products/${i.img}.jpg" alt="${esc(i.title)}" loading="lazy">`).join('')}
+        ${o.items.map((i) => `<span><img src="assets/products/${i.img}.jpg" alt="${esc(i.title)}" loading="lazy"></span>`).join('')}
       </div>
-      <div class="tiny" style="margin-block-start:12px;display:flex;gap:16px;flex-wrap:wrap">
-        <span>+${o.earned} امتیاز</span>
-        <span class="lat">${esc(o.ref)}</span>
-      </div>
+      <p class="t-fine" style="margin-block-start:var(--s3)">
+        ${toman(o.earned)} اعتبار از این سفارش به کیف شما اضافه شد
+      </p>
     </div>`).join('');
 }
 
@@ -155,11 +232,10 @@ function ordersPanel() {
 function wishPanel() {
   const items = state.wish.map((id) => PRODUCTS.find((p) => p.id === id)).filter(Boolean);
   if (!items.length) {
-    return `<div class="empty" style="padding-block:60px">${ICON.heart}
+    return `<div class="empty">${ICON.heart}
       <h3>علاقه‌مندی‌ها خالی است</h3>
-      <p class="tiny" style="max-width:30ch;margin-inline:auto">
-        روی قلبِ هر محصول بزنید تا اینجا ذخیره شود.</p>
-      <a class="btn btn--ghost btn--sm" href="#/shop" style="margin-block-start:18px">دیدن کالکشن</a></div>`;
+      <p class="t-small" style="max-width:30ch;margin-inline:auto">روی قلبِ هر محصول بزنید تا اینجا ذخیره شود.</p>
+      <a class="btn btn--ghost btn--sm" href="#/shop" style="margin-block-start:var(--s5)">دیدن کالکشن</a></div>`;
   }
   return `<div class="grid" data-cards>${items.map((p) => productCard(p)).join('')}</div>`;
 }
@@ -175,7 +251,7 @@ function addressPanel() {
       ${field('postal', 'کد پستی', { value: a.postal || '', inputmode: 'numeric', maxlength: 10, dir: 'ltr' })}
       ${field('line', 'نشانی کامل', { value: a.line || '', wide: true, type: 'textarea' })}
     </div>
-    <button class="btn btn--sm" data-saveaddr style="margin-block-start:18px">ذخیره‌ی آدرس</button>
+    <button class="btn btn--sm" data-saveaddr style="margin-block-start:var(--s4)">ذخیره‌ی آدرس</button>
   </div>`;
 }
 
@@ -186,26 +262,21 @@ function profilePanel() {
   <div class="panel">
     <h3>اطلاعات حساب</h3>
     <div class="fields fields--2">
-      ${field('name', 'نام و نام خانوادگی', { value: u.name })}
-      ${field('phone', 'شماره موبایل', { value: u.phone, inputmode: 'numeric', maxlength: 11, dir: 'ltr' })}
-      ${field('email', 'ایمیل (اختیاری)', { value: u.email || '', type: 'email', dir: 'ltr', wide: true })}
+      ${field('name', 'نام و نام خانوادگی', { value: u.name || '', placeholder: 'برای تحویل سفارش' })}
+      ${field('phone', 'شماره موبایل', { value: u.phone, dir: 'ltr', readonly: true })}
     </div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-block-start:18px">
+    <div style="display:flex;gap:var(--s2);flex-wrap:wrap;margin-block-start:var(--s4)">
       <button class="btn btn--sm" data-saveuser>ذخیره</button>
       <button class="btn btn--ghost btn--sm" data-signout>خروج از حساب</button>
     </div>
-    <p class="tiny" style="margin-block-start:18px">عضو باشگاه از ${esc(faDate(u.joined))}</p>
+    <p class="t-fine" style="margin-block-start:var(--s4)">عضو باشگاه از ${esc(faDate(u.joined))}</p>
   </div>
 
   <div class="panel">
     <h3>پشتیبانی</h3>
     <div class="trust">
-      <div>${ICON.wa}<span>واتساپ —
-        <a class="lat" dir="ltr" style="color:var(--brass)" href="https://wa.me/${BRAND.whatsapp}"
-           target="_blank" rel="noopener">+${BRAND.whatsapp}</a></span></div>
-      <div>${ICON.insta}<span>اینستاگرام —
-        <a class="lat" dir="ltr" style="color:var(--brass)" href="https://instagram.com/${BRAND.instagram}"
-           target="_blank" rel="noopener">@${BRAND.instagram}</a></span></div>
+      <div>${ICON.wa}<span>واتساپ — <a class="lat" style="color:var(--thread)" href="https://wa.me/${BRAND.whatsapp}" target="_blank" rel="noopener">+${BRAND.whatsapp}</a></span></div>
+      <div>${ICON.insta}<span>اینستاگرام — <a class="lat" style="color:var(--thread)" href="https://instagram.com/${BRAND.instagram}" target="_blank" rel="noopener">@${BRAND.instagram}</a></span></div>
       <div>${ICON.pin}<span>${esc(BRAND.address)}</span></div>
     </div>
   </div>`;
@@ -213,32 +284,59 @@ function profilePanel() {
 
 /* ----------------------------------------------------------------- view --- */
 const TABS = [
-  { id: 'club',    label: 'باشگاه لارن',   icon: 'spark' },
+  { id: 'wallet',  label: 'کیف اعتبار',    icon: 'spark' },
   { id: 'orders',  label: 'سفارش‌ها',      icon: 'box' },
   { id: 'wish',    label: 'علاقه‌مندی‌ها', icon: 'heart' },
-  { id: 'address', label: 'آدرس‌ها',       icon: 'pin' },
-  { id: 'profile', label: 'حساب کاربری',   icon: 'user' },
+  { id: 'address', label: 'آدرس',          icon: 'pin' },
+  { id: 'profile', label: 'حساب',          icon: 'user' },
 ];
 
 export default function account(ctx) {
-  if (!state.user) return signInView();
+  const tab = ctx.query.get('tab') || 'wallet';
 
-  const tab = ctx.query.get('tab') || 'club';
+  // A guest can build a wishlist, so a guest can read it. Only the tabs that
+  // genuinely need an identity sit behind the sign-in.
+  if (!state.user && tab !== 'wish') return signInView();
+
+  if (!state.user && tab === 'wish') {
+    return {
+      html: `
+      <div class="wrap page-top">
+        <span class="eyebrow">علاقه‌مندی‌ها</span>
+        <h1 class="t-h1" style="margin-block:var(--s2) var(--s6)">ذخیره‌شده‌های شما</h1>
+        ${wishPanel()}
+        <div class="panel" style="margin-block-start:var(--s6)">
+          <h3>برای همیشه نگهشان دارید</h3>
+          <p class="t-small" style="margin-block-end:var(--s4)">
+            با ورود به باشگاه، علاقه‌مندی‌هایتان روی همه‌ی دستگاه‌ها می‌ماند و
+            ${toman(SHOP.wallet.welcome)} اعتبار هدیه می‌گیرید.
+          </p>
+          <a class="btn btn--sm" href="#/account">ورود با شماره موبایل</a>
+        </div>
+      </div>`,
+      mount(root) { bindCards(root); reveal(root); },
+    };
+  }
+
   const render = {
-    club: clubPanel, orders: ordersPanel, wish: wishPanel,
+    wallet: walletPanel, orders: ordersPanel, wish: wishPanel,
     address: addressPanel, profile: profilePanel,
-  }[tab] || clubPanel;
+  }[tab] || walletPanel;
+
+  const first = (state.user.name || '').trim().split(' ')[0];
 
   const html = `
-  <div class="wrap" style="padding-block-start:calc(var(--top-h) + 30px)">
-    <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap;margin-block-end:32px">
+  <div class="wrap page-top">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:var(--s5);flex-wrap:wrap;margin-block-end:var(--s6)">
       <div>
-        <span class="eyebrow-fa">حساب کاربری</span>
-        <h1 class="h-sec" style="margin-block-start:10px">سلام ${esc(state.user.name.split(' ')[0])}</h1>
+        <span class="eyebrow">حساب کاربری</span>
+        <h1 class="t-h1" style="margin-block-start:var(--s2)">
+          ${first ? `سلام ${esc(first)}` : 'خوش آمدید'}
+        </h1>
       </div>
       <div style="text-align:end">
-        <div style="font-size:13px;color:var(--brass)">${esc(tier().tier.name)}</div>
-        <div class="tiny">${state.points} امتیاز</div>
+        <div style="font-size:13px;color:var(--muted)">${esc(tier().tier.name)}</div>
+        <div style="font-size:16px;font-weight:500">${toman(state.credit)}</div>
       </div>
     </div>
 
@@ -247,8 +345,8 @@ export default function account(ctx) {
         ${TABS.map((t) => `
           <button class="${t.id === tab ? 'is-on' : ''}" data-tab="${t.id}">
             ${ICON[t.icon]}<span>${esc(t.label)}</span>
-            ${t.id === 'wish' && state.wish.length ? `<span style="margin-inline-start:auto;font-size:11px;color:var(--bone-3)">${state.wish.length}</span>` : ''}
-            ${t.id === 'orders' && state.orders.length ? `<span style="margin-inline-start:auto;font-size:11px;color:var(--bone-3)">${state.orders.length}</span>` : ''}
+            ${t.id === 'wish' && state.wish.length ? `<span class="n num">${state.wish.length}</span>` : ''}
+            ${t.id === 'orders' && state.orders.length ? `<span class="n num">${state.orders.length}</span>` : ''}
           </button>`).join('')}
       </nav>
       <div data-panel>${render()}</div>
@@ -268,11 +366,8 @@ export default function account(ctx) {
       });
 
       $('[data-saveuser]', root)?.addEventListener('click', () => {
-        const f = readForm(root);
-        if (!validPhone(f.phone)) return fieldError(root, 'phone', 'شماره موبایل معتبر نیست');
-        fieldError(root, 'phone', '');
-        signIn({ name: f.name || state.user.name, phone: digitsOnly(f.phone), email: f.email });
-        toast('اطلاعات ذخیره شد');
+        setName($('[name="name"]', root).value.trim());
+        toast('ذخیره شد');
       });
 
       $('[data-saveaddr]', root)?.addEventListener('click', () => {
