@@ -4,7 +4,7 @@ import { SHOP, PREVIEW } from '../config.js';
 import { totals, state, saveAddress, signIn, setName } from '../store.js';
 import { field, fieldError, readForm, ICON, toast, settleImages } from '../ui.js';
 import { toman, tomanRound, esc, validPhone, validPostal, digitsOnly, $, $$ } from '../util.js';
-import { go } from '../router.js';
+import { go, refresh } from '../router.js';
 
 const PROVINCES = ['آذربایجان شرقی', 'تهران', 'اصفهان', 'خراسان رضوی', 'فارس',
   'آذربایجان غربی', 'البرز', 'گیلان', 'مازندران', 'کرمان', 'خوزستان', 'قم', 'سایر'];
@@ -159,6 +159,15 @@ export default function checkout() {
     html,
     mount(root) {
       settleImages(root);
+      // The bag can change under this view (the drawer is global), and a stale
+      // summary would send a different amount to the gateway than the one on
+      // screen. Re-render the whole route when it does.
+      const onBag = (e) => {
+        if (String(e.detail?.reason).startsWith('bag')) refresh();
+      };
+      window.addEventListener('lauren:state', onBag);
+      root.addEventListener('lauren:unmount',
+        () => window.removeEventListener('lauren:state', onBag), { once: true });
       const repaint = () => {
         const t = totals({ shippingId, useCredit, coupon: state.coupon });
         $('[data-summary]', root).innerHTML = summaryPanel(t);

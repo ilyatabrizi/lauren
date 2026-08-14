@@ -78,7 +78,11 @@ export function paintBag() {
     foot.innerHTML = '';
   } else {
     body.innerHTML = t.lines.map(lineHtml).join('');
-    const away = SHOP.freeShippingOver - t.sub;
+    // Ask totals() rather than re-deriving the rule here — the drawer used to
+    // promise "X more for free shipping" to shoppers who already had it free
+    // by tier or by the POST0 coupon.
+    const probe = totals({ shippingId: SHOP.shipping[0].id });
+    const away = probe.shipFree ? 0 : SHOP.freeShippingOver - t.sub;
     foot.innerHTML = `
       ${away > 0 ? `
         <div class="t-fine" style="margin-block-end:var(--s4)">

@@ -5,7 +5,7 @@ import { SHOP } from './config.js';
 import { byId } from './data.js';
 import { uid, clamp } from './util.js';
 
-const KEY = 'lauren.v2';
+const KEY = 'lauren.v3';
 
 const blank = () => ({
   bag: [],          // { id, size, qty }
@@ -13,13 +13,30 @@ const blank = () => ({
   user: null,       // { name, phone, joined }
   addresses: [],
   orders: [],
-  credit: 0,        // spendable balance, in Toman
-  spend12: 0,       // merchandise spent in the last 12 months — sets the tier
+  credit: 0,        // spendable balance, in Toman — belongs to the signed-in phone
+  spend12: 0,       // merchandise actually paid for in 12 months — sets the tier
   ledger: [],       // { ts, kind: 'earn'|'spend'|'welcome', amount, note, ref }
   welcomedPhones: [], // so signing out and back in can't re-mint the welcome
+  // One browser can hold several customers. Everything money-shaped is filed
+  // per phone number here; without this the wallet is browser-wide and cycling
+  // phone numbers mints an unlimited welcome balance into one pot.
+  accounts: {},     // phone -> { credit, spend12, ledger, orders, addresses, name, joined }
   recent: [],
   coupon: null,
 });
+
+/** The slice of state that belongs to a customer rather than to the browser. */
+const OWNED = ['credit', 'spend12', 'ledger', 'orders', 'addresses'];
+
+const snapshot = () => ({
+  ...Object.fromEntries(OWNED.map((k) => [k, state[k]])),
+  name: state.user?.name || '',
+  joined: state.user?.joined || Date.now(),
+});
+
+function adopt(acc) {
+  OWNED.forEach((k) => { state[k] = acc?.[k] ?? blank()[k]; });
+}
 
 function load() {
   try {
@@ -33,10 +50,23 @@ function load() {
 
 export const state = load();
 
+
 const subs = new Set();
 export const subscribe = (fn) => { subs.add(fn); return () => subs.delete(fn); };
 
+/** Another tab wrote — take its version rather than overwrite it on next commit. */
+addEventListener('storage', (e) => {
+  if (e.key !== KEY || !e.newValue) return;
+  try {
+    Object.assign(state, { ...blank(), ...JSON.parse(e.newValue) });
+    subs.forEach((fn) => fn('sync'));
+    window.dispatchEvent(new CustomEvent('lauren:state', { detail: { reason: 'sync' } }));
+  } catch { /* ignore a torn write */ }
+});
+
+
 export function commit(reason = 'change') {
+  if (state.user?.phone) state.accounts[state.user.phone] = snapshot();
   try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { /* private mode */ }
   subs.forEach((fn) => fn(reason));
   window.dispatchEvent(new CustomEvent('lauren:state', { detail: { reason } }));
@@ -102,11 +132,16 @@ export function tier() {
 /* ------------------------------------------------------------------ auth */
 export function signIn({ name, phone }) {
   const clean = String(phone).replace(/\D/g, '');
-  const returning = state.user && state.user.phone === clean;
+  if (state.user?.phone && state.user.phone !== clean) {
+    // a different customer on the same device — bank the current one first
+    state.accounts[state.user.phone] = snapshot();
+  }
+  const saved = state.accounts[clean];
+  adopt(saved);
   state.user = {
-    name: name || (returning ? state.user.name : ''),
+    name: name || saved?.name || '',
     phone: clean,
-    joined: returning ? state.user.joined : Date.now(),
+    joined: saved?.joined || Date.now(),
   };
   // The welcome credit is minted once per phone number. Keying it off
   // "is there a user object?" let anyone sign out and back in for another
@@ -131,7 +166,12 @@ export function setName(name) {
   commit('auth');
 }
 
-export function signOut() { state.user = null; commit('auth'); }
+export function signOut() {
+  if (state.user?.phone) state.accounts[state.user.phone] = snapshot();
+  state.user = null;
+  adopt(null);          // the next person must not inherit this wallet
+  commit('auth');
+}
 
 /* -------------------------------------------------------------- addresses */
 export function saveAddress(addr) {
@@ -219,7 +259,9 @@ export function placeOrder({ address, shippingId, gateway, t, ref }) {
   });
 
   state.credit = Math.max(0, state.credit - t.creditUsed + t.earns);
-  state.spend12 += t.goods;   // tier follows real spending only
+  // Tier follows money actually paid. Counting the credit-funded part would
+  // let the welcome gift buy tier progress.
+  state.spend12 += Math.max(0, t.goods - t.creditUsed);
   state.bag = [];
   state.coupon = null;
   commit('order');

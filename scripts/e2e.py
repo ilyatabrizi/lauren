@@ -60,7 +60,7 @@ def run(page, errors):
     page.wait_for_timeout(400)
     page.locator('[data-fav]').first.click()
     page.wait_for_timeout(250)
-    wish = page.evaluate("JSON.parse(localStorage.getItem('lauren.v2')).wish")
+    wish = page.evaluate("JSON.parse(localStorage.getItem('lauren.v3')).wish")
     check('heart saves to the wishlist', len(wish) == 1, wish)
 
     # a guest can build a wishlist, so a guest must be able to read it back
@@ -76,7 +76,7 @@ def run(page, errors):
     page.click('[data-add]')
     page.wait_for_timeout(300)
     check('size gate blocks a bare add',
-          page.evaluate("JSON.parse(localStorage.getItem('lauren.v2')).bag.length") == 0)
+          page.evaluate("JSON.parse(localStorage.getItem('lauren.v3')).bag.length") == 0)
 
     page.click('[data-size="L"]')
     page.click('[data-add]')
@@ -86,12 +86,12 @@ def run(page, errors):
     page.locator('.drawer [data-inc]').first.click()
     page.wait_for_timeout(300)
     check('quantity steps up',
-          page.evaluate("JSON.parse(localStorage.getItem('lauren.v2')).bag[0].qty") == 2)
+          page.evaluate("JSON.parse(localStorage.getItem('lauren.v3')).bag[0].qty") == 2)
 
     page.locator('.drawer [data-dec]').first.click()
     page.wait_for_timeout(300)
     check('quantity steps down',
-          page.evaluate("JSON.parse(localStorage.getItem('lauren.v2')).bag[0].qty") == 1)
+          page.evaluate("JSON.parse(localStorage.getItem('lauren.v3')).bag[0].qty") == 1)
 
     page.keyboard.press('Escape')
     page.wait_for_timeout(400)
@@ -130,7 +130,7 @@ def run(page, errors):
     page.click('[data-coupon]')
     page.wait_for_timeout(350)
     check('bad coupon is refused',
-          page.evaluate("JSON.parse(localStorage.getItem('lauren.v2')).coupon") is None)
+          page.evaluate("JSON.parse(localStorage.getItem('lauren.v3')).coupon") is None)
 
     page.fill('#cp', 'LAUREN10')
     page.click('[data-coupon]')
@@ -174,7 +174,7 @@ def run(page, errors):
 
     # ----------------------------------------------------------------- order
     print('\norder + loyalty')
-    st = page.evaluate("JSON.parse(localStorage.getItem('lauren.v2'))")
+    st = page.evaluate("JSON.parse(localStorage.getItem('lauren.v3'))")
     check('order recorded', len(st['orders']) == 1, len(st['orders']))
     check('bag emptied', st['bag'] == [], st['bag'])
     o = st['orders'][0]
@@ -192,8 +192,9 @@ def run(page, errors):
     check('balance = welcome − spent + earned',
           st['credit'] == 200_000 - o['totals']['creditUsed'] + o['earned'],
           f"{st['credit']}")
-    check('tier tracks real spend only', st['spend12'] == o['totals']['goods'],
-          f"{st['spend12']} vs {o['totals']['goods']}")
+    check('tier counts money paid, not credit spent',
+          st['spend12'] == o['totals']['goods'] - o['totals']['creditUsed'],
+          f"{st['spend12']} vs {o['totals']['goods'] - o['totals']['creditUsed']}")
     check('ledger records the earn', any(r['kind'] == 'earn' for r in st['ledger']))
     check('confirmation shows the order id', o['id'] in page.inner_text('#view'))
 
@@ -209,7 +210,7 @@ def run(page, errors):
 
     # ---------------------------------------------------------- wallet rules
     print('\nwallet rules')
-    before = page.evaluate("JSON.parse(localStorage.getItem('lauren.v2'))")
+    before = page.evaluate("JSON.parse(localStorage.getItem('lauren.v3'))")
     page.goto(f'{BASE}/#/account?tab=profile', wait_until='networkidle')
     page.wait_for_timeout(500)
     page.click('[data-signout]')
@@ -222,7 +223,7 @@ def run(page, errors):
     for i, ch in enumerate(otp):
         boxes.nth(i).fill(ch)
     page.wait_for_timeout(900)
-    after = page.evaluate("JSON.parse(localStorage.getItem('lauren.v2'))")
+    after = page.evaluate("JSON.parse(localStorage.getItem('lauren.v3'))")
     # signing out and back in used to re-mint the welcome bonus every time
     check('welcome credit is minted once per phone',
           after['credit'] == before['credit'],
@@ -235,7 +236,7 @@ def run(page, errors):
     page.wait_for_timeout(400)
     page.keyboard.press('Escape')
     cap = page.evaluate("""() => {
-      const s = JSON.parse(localStorage.getItem('lauren.v2'));
+      const s = JSON.parse(localStorage.getItem('lauren.v3'));
       return { credit: s.credit };
     }""")
     page.goto(f'{BASE}/#/checkout', wait_until='networkidle')
@@ -252,12 +253,51 @@ def run(page, errors):
         }""")
         check('credit is capped at half the goods', bool(used), used)
 
+    # a second phone number must not top up the first one's wallet
+    page.goto(f'{BASE}/#/account?tab=profile', wait_until='networkidle')
+    page.wait_for_timeout(500)
+    page.click('[data-signout]')
+    page.wait_for_timeout(600)
+    page.fill('[name="phone"]', '09121110000')
+    page.click('[data-step1] button[type=submit]')
+    page.wait_for_timeout(500)
+    otp2 = page.inner_text('[data-sent] b').strip()
+    b2 = page.locator('.otp input')
+    for i, ch in enumerate(otp2):
+        b2.nth(i).fill(ch)
+    page.wait_for_timeout(900)
+    second = page.evaluate("JSON.parse(localStorage.getItem('lauren.v3'))")
+    check('a new phone gets its own wallet, not the last one\'s',
+          second['credit'] == 200_000, second['credit'])
+    check('a new phone gets its own order history', second['orders'] == [],
+          len(second['orders']))
+    check('a new phone starts at tier zero', second['spend12'] == 0, second['spend12'])
+
+    # and switching back restores the first customer
+    page.goto(f'{BASE}/#/account?tab=profile', wait_until='networkidle')
+    page.wait_for_timeout(500)
+    page.click('[data-signout]')
+    page.wait_for_timeout(600)
+    page.fill('[name="phone"]', '09141234567')
+    page.click('[data-step1] button[type=submit]')
+    page.wait_for_timeout(500)
+    otp3 = page.inner_text('[data-sent] b').strip()
+    b3 = page.locator('.otp input')
+    for i, ch in enumerate(otp3):
+        b3.nth(i).fill(ch)
+    page.wait_for_timeout(900)
+    back = page.evaluate("JSON.parse(localStorage.getItem('lauren.v3'))")
+    check('switching back restores the first customer', len(back['orders']) == 1,
+          len(back['orders']))
+    check('no second welcome on return', back['credit'] == after['credit'],
+          f"{after['credit']} -> {back['credit']}")
+
     # ------------------------------------------------------------- persistence
     page.goto(f'{BASE}/#/account', wait_until='networkidle')
     page.wait_for_timeout(500)
     page.reload(wait_until='networkidle')
     page.wait_for_timeout(600)
-    st2 = page.evaluate("JSON.parse(localStorage.getItem('lauren.v2'))")
+    st2 = page.evaluate("JSON.parse(localStorage.getItem('lauren.v3'))")
     check('state survives a reload', st2['orders'][0]['id'] == o['id'])
 
     # -------------------------------------------------------------------- pwa
