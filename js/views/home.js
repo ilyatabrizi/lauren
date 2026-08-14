@@ -102,7 +102,7 @@ export default function home() {
     <div class="sec__head">
       <div>
         <span class="eyebrow">محبوب‌ترین‌ها</span>
-        <h2 class="t-h1">آنچه بیشتر می‌بریدشان</h2>
+        <h2 class="t-h1">بیشتر از همه انتخاب می‌شوند</h2>
       </div>
       <a class="link" href="#/shop?sort=best">پرفروش‌ها ${ICON.back}</a>
     </div>

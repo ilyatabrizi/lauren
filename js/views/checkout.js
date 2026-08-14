@@ -1,7 +1,7 @@
 // LAUREN — checkout: contact, address, shipping, payment method.
 
 import { SHOP, PREVIEW } from '../config.js';
-import { totals, state, saveAddress, signIn, setName } from '../store.js';
+import { totals, state, saveAddress, signIn, setName, commit } from '../store.js';
 import { field, fieldError, readForm, ICON, toast, settleImages } from '../ui.js';
 import { toman, tomanRound, esc, validPhone, validPostal, digitsOnly, $, $$ } from '../util.js';
 import { go, refresh } from '../router.js';
@@ -183,7 +183,7 @@ export default function checkout() {
       function bindCoupon() {
         $('[data-coupon]', root)?.addEventListener('click', () => {
           const code = $('#cp', root).value.trim().toUpperCase();
-          if (!code) { state.coupon = null; repaint(); return; }
+          if (!code) { state.coupon = null; commit('coupon'); repaint(); return; }
           if (SHOP.coupons[code]) {
             state.coupon = code;
             toast(`کد تخفیف اعمال شد — ${SHOP.coupons[code].label}`, 'gift');
@@ -191,6 +191,7 @@ export default function checkout() {
             state.coupon = null;
             toast('این کد تخفیف معتبر نیست', 'info');
           }
+          commit('coupon');   // otherwise a reload silently drops the discount
           repaint();
         });
       }
@@ -215,6 +216,10 @@ export default function checkout() {
       });
 
       $('[data-pay]', root).addEventListener('click', () => {
+        if (!totals().lines.length) {
+          toast('سبد خرید خالی شده است', 'info');
+          return go('/shop');
+        }
         const f = readForm(root);
         let ok = true;
         const req = (k, msg, test = (v) => !!v) => {
@@ -243,7 +248,11 @@ export default function checkout() {
         });
 
         sessionStorage.setItem('lauren.pending', JSON.stringify({
+          // stamp the identity: the gateway must refuse a basket that was
+          // priced for a different customer, or for none
+          phone: state.user?.phone || '',
           addressId: addr.id, shippingId, gateway, useCredit,
+          quoted: totals({ shippingId, useCredit, coupon: state.coupon }).grand,
         }));
         go('/pay');
       });

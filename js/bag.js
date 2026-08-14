@@ -92,8 +92,11 @@ export function paintBag() {
         <div class="t-fine" style="margin-block-end:var(--s4);color:var(--thread)">این سفارش ارسال رایگان دارد</div>`}
       <div class="sums">
         ${t.savedOnList ? `<div class="save"><span>سود شما از تخفیف‌ها</span><span>${toman(t.savedOnList)}</span></div>` : ''}
-        <div class="tot"><span>جمع کل</span><b>${toman(t.sub)}</b></div>
+        <div class="tot"><span>جمع کالاها</span><b>${toman(t.sub)}</b></div>
       </div>
+      <p class="t-fine" style="margin-block:calc(var(--s2) * -1) var(--s3)">
+        ارسال و تخفیف در مرحله‌ی بعد حساب می‌شود
+      </p>
       <a class="btn btn--block btn--lg" href="#/checkout" data-nav>تسویه حساب</a>
       <button class="btn btn--ghost btn--block btn--sm" data-close2 style="margin-block-start:var(--s2)">ادامه‌ی خرید</button>
       <p class="t-fine" style="text-align:center;margin-block-start:var(--s3)">

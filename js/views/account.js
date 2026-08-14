@@ -102,8 +102,10 @@ function signInView() {
 
       // one digit per box, moving forward as you type and back on delete
       boxes.forEach((box, i) => {
+        box.addEventListener('focus', () => box.select());
         box.addEventListener('input', () => {
-          box.value = box.value.replace(/\D/g, '').slice(0, 1);
+          // take the digit just typed, not the one already sitting there
+          box.value = box.value.replace(/\D/g, '').slice(-1);
           box.classList.remove('bad');
           if (box.value && i < boxes.length - 1) boxes[i + 1].focus();
           if (boxes.every((b) => b.value)) s2.requestSubmit();
@@ -125,8 +127,8 @@ function signInView() {
         e.preventDefault();
         const entered = boxes.map((b) => b.value).join('');
         if (entered !== code) {
-          boxes.forEach((b) => b.classList.add('bad'));
-          $('[data-otperr]', root).textContent = 'کد وارد شده درست نیست';
+          boxes.forEach((b) => { b.classList.add('bad'); b.value = ''; });
+          $('[data-otperr]', root).textContent = 'کد وارد شده درست نیست — دوباره وارد کنید';
           boxes[0].focus();
           return;
         }

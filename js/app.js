@@ -251,7 +251,6 @@ function boot() {
 
   // after each render
   onAfter((ctx, root) => {
-    root.dispatchEvent(new CustomEvent('lauren:unmount'));
     document.body.classList.toggle('on-gateway', ctx.path === '/pay');
     markActive(ctx);
     scrollTop();

@@ -43,6 +43,10 @@ export async function render(outlet) {
 
   hooks.before.forEach((fn) => fn(ctx));
 
+  // Let the outgoing view tear down BEFORE its markup is replaced. Firing this
+  // after the new view mounts would hand its own cleanup straight back to it.
+  outlet.dispatchEvent(new CustomEvent('lauren:unmount'));
+
   // fade the old view out, swap, fade in — cheap but reads as intentional
   outlet.style.opacity = '0';
   await new Promise((r) => setTimeout(r, current === null ? 0 : 130));

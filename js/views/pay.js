@@ -20,10 +20,22 @@ export default function pay() {
   const pend = pending();
   const t = totals({ shippingId: pend?.shippingId, useCredit: pend?.useCredit || 0 });
 
-  if (!pend || !t.lines.length) {
+  // The basket was priced under a particular identity. If the shopper signed
+  // out, switched account or emptied the bag in another tab since, the amount
+  // on this page would no longer be the amount that gets charged.
+  const stale = pend && (
+    (pend.phone || '') !== (state.user?.phone || '') ||
+    (typeof pend.quoted === 'number' && pend.quoted !== t.grand)
+  );
+
+  if (!pend || !t.lines.length || stale) {
     return { html: `<div class="wrap empty page-top">
-      <h3>سفارشی برای پرداخت نیست</h3>
-      <a class="btn btn--ghost btn--sm" href="#/shop" style="margin-block-start:18px">بازگشت به فروشگاه</a>
+      <h3>${stale ? 'سبد شما تغییر کرده است' : 'سفارشی برای پرداخت نیست'}</h3>
+      <p class="t-small" style="max-width:34ch;margin-inline:auto">${stale
+        ? 'برای اینکه مبلغ درست محاسبه شود، لطفاً یک‌بار دیگر از صفحه‌ی تسویه حساب شروع کنید.'
+        : 'اول چیزی به سبد اضافه کنید.'}</p>
+      <a class="btn btn--ghost btn--sm" href="${stale ? '#/checkout' : '#/shop'}"
+         style="margin-block-start:var(--s5)">${stale ? 'بازگشت به تسویه حساب' : 'بازگشت به فروشگاه'}</a>
     </div>` };
   }
 

@@ -137,6 +137,9 @@ def run(page, errors):
     page.wait_for_timeout(400)
     sums = page.inner_text('.summary .sums')
     check('coupon shows a discount line', 'کد تخفیف' in sums, sums.replace('\n', ' '))
+    check('coupon survives a reload',
+          page.evaluate("JSON.parse(localStorage.getItem('lauren.v3')).coupon") == 'LAUREN10',
+          page.evaluate("JSON.parse(localStorage.getItem('lauren.v3')).coupon"))
 
     # shipping is pre-selected, so the arrival total must already include it
     ship_row = [r for r in page.inner_text('.summary .sums').split('\n') if 'ارسال' in r]
@@ -150,6 +153,14 @@ def run(page, errors):
     # -------------------------------------------------------------- gateway
     print('\ngateway')
     check('preview warning is on the gateway', page.locator('.gate__warn').count() == 1)
+    # The lauren:unmount hook used to fire straight after mount, which killed
+    # this countdown (and the OTP resend timer, and checkout's bag listener)
+    # on their own first frame. A ticking clock proves the ordering.
+    t0 = page.inner_text('[data-clock]')
+    page.wait_for_timeout(2200)
+    check('gateway countdown is actually running',
+          page.inner_text('[data-clock]') != t0,
+          f"{t0} -> {page.inner_text('[data-clock]')}")
     check('test card is pre-filled',
           page.input_value('#pan').startswith('6037'), page.input_value('#pan'))
 
@@ -262,6 +273,15 @@ def run(page, errors):
     page.click('[data-step1] button[type=submit]')
     page.wait_for_timeout(500)
     otp2 = page.inner_text('[data-sent] b').strip()
+    # a wrong code must be recoverable — the boxes used to keep their old digits
+    wrong = ''.join('0' if c != '0' else '1' for c in otp2)
+    bw = page.locator('.otp input')
+    for i, ch in enumerate(wrong):
+        bw.nth(i).fill(ch)
+    page.wait_for_timeout(700)
+    check('a wrong code can be retyped',
+          page.evaluate("[...document.querySelectorAll('.otp input')].every(b => b.value === '')"),
+          page.evaluate("[...document.querySelectorAll('.otp input')].map(b => b.value)"))
     b2 = page.locator('.otp input')
     for i, ch in enumerate(otp2):
         b2.nth(i).fill(ch)
@@ -292,13 +312,48 @@ def run(page, errors):
     check('no second welcome on return', back['credit'] == after['credit'],
           f"{after['credit']} -> {back['credit']}")
 
-    # ------------------------------------------------------------- persistence
-    page.goto(f'{BASE}/#/account', wait_until='networkidle')
-    page.wait_for_timeout(500)
-    page.reload(wait_until='networkidle')
+    # A basket priced for one customer must not be payable by another. Signing
+    # out mid-flow used to produce a paid order with no address and spend credit
+    # the signed-out wallet no longer had.
+    page.goto(f'{BASE}/#/p/polo-steel', wait_until='networkidle')
+    page.wait_for_timeout(450)
+    page.click('[data-size="M"]'); page.click('[data-add]')
+    page.wait_for_timeout(400); page.keyboard.press('Escape')
+    page.goto(f'{BASE}/#/checkout', wait_until='networkidle')
+    page.wait_for_timeout(700)
+    for n, v in [('name', 'علی'), ('line', 'خیابان ولیعصر پلاک ۱۲'), ('postal', '5157733123')]:
+        page.fill(f'[name="{n}"]', v)
+    page.click('[data-pay]')
+    page.wait_for_timeout(900)
+    check('reached the gateway again', page.locator('[data-do]').count() == 1)
+    page.goto(f'{BASE}/#/account?tab=profile', wait_until='networkidle')
     page.wait_for_timeout(600)
+    page.click('[data-signout]')
+    page.wait_for_timeout(700)
+    page.goto(f'{BASE}/#/pay', wait_until='networkidle')
+    page.wait_for_timeout(800)
+    check('gateway refuses a basket priced for someone else',
+          page.locator('[data-do]').count() == 0 and
+          'سبد شما تغییر کرده است' in page.inner_text('#view'))
+
+    # ------------------------------------------------------------- persistence
+    # the identity test above left us signed out; come back as the buyer
+    page.goto(f'{BASE}/#/account', wait_until='networkidle')
+    page.wait_for_timeout(600)
+    page.fill('[name="phone"]', '09141234567')
+    page.click('[data-step1] button[type=submit]')
+    page.wait_for_timeout(500)
+    otp4 = page.inner_text('[data-sent] b').strip()
+    b4 = page.locator('.otp input')
+    for i, ch in enumerate(otp4):
+        b4.nth(i).fill(ch)
+    page.wait_for_timeout(900)
+    page.reload(wait_until='networkidle')
+    page.wait_for_timeout(700)
     st2 = page.evaluate("JSON.parse(localStorage.getItem('lauren.v3'))")
-    check('state survives a reload', st2['orders'][0]['id'] == o['id'])
+    check('the order survives a reload',
+          bool(st2['orders']) and st2['orders'][0]['id'] == o['id'],
+          [x['id'] for x in st2['orders']])
 
     # -------------------------------------------------------------------- pwa
     print('\npwa')
