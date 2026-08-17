@@ -1,6 +1,6 @@
 // LAUREN — checkout: contact, address, shipping, payment method.
 
-import { SHOP, PREVIEW } from '../config.js';
+import { SHOP, PREVIEW, BRAND } from '../config.js';
 import { totals, state, saveAddress, signIn, setName, commit } from '../store.js';
 import { field, fieldError, readForm, ICON, toast, settleImages } from '../ui.js';
 import { toman, tomanRound, esc, validPhone, validPostal, digitsOnly, $, $$ } from '../util.js';
@@ -84,7 +84,7 @@ export default function checkout() {
           </div>
         </div>
 
-        <div class="panel">
+        <div class="panel" data-addr>
           <h3>آدرس تحویل</h3>
           <div class="fields fields--2">
             <div class="field" data-field="province">
@@ -99,6 +99,17 @@ export default function checkout() {
             ${field('postal', 'کد پستی', { value: a.postal || '', inputmode: 'numeric', maxlength: 10, dir: 'ltr', placeholder: '۱۰ رقم' })}
             ${field('receiver', 'تحویل‌گیرنده (اختیاری)', { value: a.receiver || '', placeholder: 'اگر شخص دیگری تحویل می‌گیرد' })}
           </div>
+        </div>
+
+        <div class="panel" data-pickup-note hidden>
+          <h3>تحویل حضوری</h3>
+          <div class="trust">
+            <div>${ICON.pin}<span>${esc(BRAND.address)}</span></div>
+            <div>${ICON.clock}<span>${esc(BRAND.hours)} — سفارش تا ۲ ساعت آماده می‌شود.</span></div>
+            <div>${ICON.swap}<span>می‌توانید همان‌جا پرو کنید و اگر سایز نشد عوض کنید.</span></div>
+          </div>
+          <a class="btn btn--ghost btn--sm" target="_blank" rel="noopener"
+             href="${BRAND.mapUrl}" style="margin-block-start:var(--s4)">مسیریابی روی نقشه</a>
         </div>
 
         <div class="panel">
@@ -136,7 +147,7 @@ export default function checkout() {
                 <input type="radio" name="gate" value="${g.id}" ${i === 0 ? 'checked' : ''}>
                 <span class="pickitem__dot"></span>
                 <span class="pickitem__t">${esc(g.label)}<span class="pickitem__s">${esc(g.sub)}</span></span>
-                <span style="width:18px;color:var(--faint)">${ICON.card}</span>
+                <span style="width:18px;color:var(--muted)">${ICON.card}</span>
               </label>`).join('')}
           </div>
           ${PREVIEW.enabled ? `
@@ -206,7 +217,14 @@ export default function checkout() {
           });
         });
       };
-      group('[data-ship]', (v) => { shippingId = v; repaint(); });
+      const isPickup = () => !!SHOP.shipping.find((x) => x.id === shippingId)?.pickup;
+      const syncPickup = () => {
+        const pick = isPickup();
+        $('[data-addr]', root).hidden = pick;
+        $('[data-pickup-note]', root).hidden = !pick;
+      };
+      group('[data-ship]', (v) => { shippingId = v; syncPickup(); repaint(); });
+      syncPickup();
       group('[data-gate]', (v) => { gateway = v; });
 
       $('[data-usecredit]', root)?.addEventListener('click', function () {
@@ -229,8 +247,12 @@ export default function checkout() {
         };
         req('name', 'نام را وارد کنید');
         req('phone', 'شماره موبایل معتبر نیست', validPhone);
-        req('line', 'نشانی را وارد کنید', (v) => v && v.length > 9);
-        req('postal', 'کد پستی باید ۱۰ رقم باشد', validPostal);
+        if (!isPickup()) {
+          req('line', 'نشانی را وارد کنید', (v) => v && v.length > 9);
+          req('postal', 'کد پستی باید ۱۰ رقم باشد', validPostal);
+        } else {
+          fieldError(root, 'line', ''); fieldError(root, 'postal', '');
+        }
 
         if (!ok) {
           toast('چند مورد را کامل کنید', 'info');
@@ -240,12 +262,15 @@ export default function checkout() {
 
         signIn({ phone: digitsOnly(f.phone) });
         setName(f.name);
-        const addr = saveAddress({
-          id: state.addresses[0]?.id,
-          label: 'آدرس اصلی',
-          province: f.province, city: f.city, line: f.line,
-          postal: digitsOnly(f.postal), receiver: f.receiver, phone: digitsOnly(f.phone),
-        });
+        const addr = isPickup()
+          ? { id: 'pickup', label: 'تحویل حضوری', city: 'تبریز',
+              line: BRAND.address, postal: '', phone: digitsOnly(f.phone) }
+          : saveAddress({
+              id: state.addresses[0]?.id,
+              label: 'آدرس اصلی',
+              province: f.province, city: f.city, line: f.line,
+              postal: digitsOnly(f.postal), receiver: f.receiver, phone: digitsOnly(f.phone),
+            });
 
         sessionStorage.setItem('lauren.pending', JSON.stringify({
           // stamp the identity: the gateway must refuse a basket that was

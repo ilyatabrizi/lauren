@@ -19,7 +19,9 @@ from playwright.sync_api import sync_playwright
 BASE = sys.argv[1] if len(sys.argv) > 1 else 'http://localhost:8071'
 
 ROUTES = ['/', '/shop', '/shop?cat=knit', '/shop?sort=low', '/p/polo-noir',
-          '/p/set-cacao', '/about', '/contact', '/faq', '/account', '/nope']
+          '/p/set-cacao', '/search', '/bag', '/wishlist', '/track',
+          '/size-guide', '/shipping', '/about', '/contact', '/faq',
+          '/account', '/nope']
 
 passed, failed = [], []
 
@@ -391,6 +393,166 @@ def run(page, errors):
     check('prices use the Persian thousands mark', '٬' in price, price)
     check('no unresolved template braces in the DOM',
           '${' not in page.inner_text('body'))
+
+    # ------------------------------------------------------- glass nav + tabs
+    print('\nnavigation')
+    page.set_viewport_size({'width': 390, 'height': 844})
+    tabmap = {
+        '/': '#/', '/shop': '#/shop', '/p/polo-noir': '#/shop', '/search': '#/shop',
+        '/size-guide': '#/shop', '/shipping': '#/shop', '/faq': '#/shop',
+        '/bag': '#/bag', '/checkout': '#/bag',
+        '/account': '#/account', '/wishlist': '#/account', '/track': '#/account',
+        '/about': '#/', '/contact': '#/',
+    }
+    orphan = []
+    for r, want in tabmap.items():
+        page.goto(f'{BASE}/#{r}', wait_until='networkidle')
+        page.wait_for_timeout(500)
+        got = page.evaluate("""() => {
+          const a = document.querySelector('.tabbar a[aria-current="page"]');
+          const p = document.querySelector('.tabbar__pill');
+          return { tab: a && a.getAttribute('href'), op: p.style.opacity, w: p.style.width };
+        }""")
+        if got['tab'] != want or got['op'] != '1' or not got['w']:
+            orphan.append(f"{r} -> {got}")
+    check('every route lights exactly one tab', not orphan, orphan[:3])
+
+    page.goto(f'{BASE}/#/', wait_until='networkidle')
+    page.wait_for_timeout(700)
+    x1 = page.evaluate("document.querySelector('.tabbar__pill').style.transform")
+    page.click('.tabbar a[data-tabnav="/shop"]')
+    page.wait_for_timeout(900)
+    x2 = page.evaluate("document.querySelector('.tabbar__pill').style.transform")
+    check('the pill moves between tabs', x1 != x2 and x2, f"{x1} -> {x2}")
+
+    glass = page.evaluate("""() => {
+      const cs = getComputedStyle(document.querySelector('.tabbar'));
+      return { blur: cs.backdropFilter || cs.webkitBackdropFilter, bg: cs.backgroundColor };
+    }""")
+    check('the tab bar is real glass', 'blur' in (glass['blur'] or ''), glass)
+
+    # the header is clear over the hero and frosts once content passes under it
+    page.goto(f'{BASE}/#/shop', wait_until='networkidle')
+    page.wait_for_timeout(700)
+    top = page.evaluate("document.querySelector('.topbar').classList.contains('is-stuck')")
+    page.evaluate('scrollTo(0, 800)')
+    page.wait_for_timeout(700)
+    down = page.evaluate("""() => {
+      const el = document.querySelector('.topbar');
+      const cs = getComputedStyle(el);
+      return { stuck: el.classList.contains('is-stuck'),
+               blur: cs.backdropFilter || cs.webkitBackdropFilter };
+    }""")
+    check('the header frosts on scroll',
+          not top and down['stuck'] and 'blur' in (down['blur'] or ''),
+          f"top={top} down={down}")
+
+    # Back must dismiss an overlay, not navigate the page underneath
+    page.goto(f'{BASE}/#/p/polo-noir', wait_until='networkidle')
+    page.wait_for_timeout(600)
+    page.click('[data-size="L"]'); page.click('[data-add]')
+    page.wait_for_timeout(700)
+    check('drawer opened', page.locator('.drawer.is-open').count() == 1)
+    page.go_back()
+    page.wait_for_timeout(700)
+    check('back closes the drawer and stays on the product',
+          page.locator('.drawer.is-open').count() == 0 and '/p/polo-noir' in page.url,
+          page.url)
+
+    # ------------------------------------------------------------ new pages
+    print('\nnew pages')
+    page.goto(f'{BASE}/#/search', wait_until='networkidle')
+    page.wait_for_timeout(600)
+    page.fill('#q', 'زیتونی')
+    page.wait_for_timeout(600)
+    check('search finds by colour', page.locator('[data-results] .card').count() >= 1,
+          page.locator('[data-results] .card').count())
+    page.fill('#q', '07')
+    page.wait_for_timeout(600)
+    check('search finds by piece number',
+          page.locator('[data-results] .card').count() == 1,
+          page.locator('[data-results] .card').count())
+    check('recently-viewed is out of the way while searching',
+          page.locator('[data-recent]').is_hidden() if page.locator('[data-recent]').count() else True)
+    page.fill('#q', 'qqqq')
+    page.wait_for_timeout(600)
+    check('search has a real empty state', 'چیزی پیدا نشد' in page.inner_text('[data-results]'))
+
+    page.goto(f'{BASE}/#/p/polo-steel', wait_until='networkidle')
+    page.wait_for_timeout(600)
+    sizes = page.locator('[data-size]').count()
+    outs = page.locator('[data-size][data-out]').count()
+    check('every size in the ladder is shown, sold-out included',
+          sizes == 5 and outs >= 1, f"{sizes} sizes, {outs} sold out")
+    page.locator('[data-size][data-out]').first.click()
+    page.wait_for_timeout(500)
+    check('a sold-out size can be subscribed to',
+          page.locator('[data-size].is-noted').count() >= 1)
+
+    page.goto(f'{BASE}/#/p/set-onyx', wait_until='networkidle')
+    page.wait_for_timeout(600)
+    page.click('.acc__item:last-child .acc__btn')
+    page.wait_for_timeout(500)
+    guide = page.inner_text('.acc__item:last-child')
+    check('a set quotes trouser measurements too', 'دور کمر' in guide,
+          guide.replace('\n', ' ')[:90])
+
+    # in-store pickup skips the address it does not need
+    print('\npickup')
+    page.goto(f'{BASE}/#/p/polo-noir', wait_until='networkidle')
+    page.wait_for_timeout(500)
+    page.click('[data-size="L"]'); page.click('[data-add]')
+    page.wait_for_timeout(500); page.keyboard.press('Escape')
+    page.goto(f'{BASE}/#/checkout', wait_until='networkidle')
+    page.wait_for_timeout(700)
+    check('address is asked for by default', not page.locator('[data-addr]').is_hidden())
+    page.locator('[data-ship] .pickitem').last.click()
+    page.wait_for_timeout(500)
+    check('pickup hides the address panel', page.locator('[data-addr]').is_hidden())
+    page.fill('[name="name"]', 'علی رضایی')
+    page.fill('[name="phone"]', '09141234567')
+    page.click('[data-pay]')
+    page.wait_for_timeout(900)
+    check('pickup checks out with no address', '#/pay' in page.url, page.url)
+
+    # ---------------------------------------------------- order detail + acts
+    print('\norder actions')
+    page.click('[data-otp]')
+    page.wait_for_timeout(300)
+    c2 = re.search(r'\d{6}', page.inner_text('[data-otphint]')).group(0)
+    page.fill('#otp', c2)
+    page.click('[data-do]')
+    page.wait_for_timeout(2600)
+    st3 = page.evaluate("JSON.parse(localStorage.getItem('lauren.v3'))")
+    oid = st3['orders'][0]['id']
+    page.goto(f'{BASE}/#/order/{oid}', wait_until='networkidle')
+    page.wait_for_timeout(700)
+    check('order detail opens', oid in page.inner_text('#view'))
+    check('order detail offers a reorder', page.locator('[data-reorder]').count() == 1)
+    page.click('[data-reorder]')
+    page.wait_for_timeout(900)
+    check('reorder fills the bag and goes there',
+          '#/bag' in page.url and page.locator('.bagline').count() >= 1, page.url)
+
+    page.goto(f'{BASE}/#/exchange/{oid}', wait_until='networkidle')
+    page.wait_for_timeout(700)
+    check('the exchange form exists', page.locator('[data-form]').count() == 1)
+    page.locator('[data-newsize] .size:not([disabled])').first.click()
+    page.wait_for_timeout(300)
+    page.evaluate("window.open = () => null")   # don't spawn a WhatsApp tab
+    page.locator('[data-form] button[type=submit]').click()
+    page.wait_for_timeout(1200)
+    st4 = page.evaluate("JSON.parse(localStorage.getItem('lauren.v3'))")
+    ex = st4['orders'][0].get('exchange')
+    check('the exchange request is recorded on the order',
+          bool(ex) and ex['toSize'] != ex['fromSize'], ex)
+
+    page.goto(f'{BASE}/#/track?id={oid}', wait_until='networkidle')
+    page.wait_for_timeout(700)
+    check('the tracker shows the order stages', page.locator('.track__step').count() >= 4,
+          page.locator('.track__step').count())
+
+    page.set_viewport_size({'width': 1400, 'height': 900})
 
     print('\nconsole')
     check('no console errors', not errors, errors[:3])

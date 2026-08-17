@@ -2,7 +2,7 @@
  * App shell is precached so the store opens instantly and works offline;
  * product photos fill a capped runtime cache as they are browsed. */
 
-const VERSION = 'lauren-v3';
+const VERSION = 'lauren-v4';
 const SHELL = `${VERSION}-shell`;
 const MEDIA = `${VERSION}-media`;
 const MEDIA_MAX = 90;
@@ -30,6 +30,9 @@ const PRECACHE = [
   './js/views/thanks.js',
   './js/views/account.js',
   './js/views/pages.js',
+  './js/views/bag.js',
+  './js/views/search.js',
+  './js/views/more.js',
   './assets/fonts/IRANYekanXFaNum-Light.woff2',
   './assets/fonts/IRANYekanXFaNum-Regular.woff2',
   './assets/fonts/IRANYekanXFaNum-Medium.woff2',

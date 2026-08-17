@@ -2,7 +2,7 @@
 
 import { SHOP } from './config.js';
 import { totals, setQty, removeLine, state } from './store.js';
-import { ICON, photo, settleImages, toast } from './ui.js';
+import { ICON, photo, settleImages, toast, pushOverlay, popOverlay } from './ui.js';
 import { toman, esc, $, $$ } from './util.js';
 
 let drawer, scrim, body, foot, open = false;
@@ -10,7 +10,7 @@ let drawer, scrim, body, foot, open = false;
 function build() {
   scrim = document.createElement('div');
   scrim.className = 'scrim';
-  scrim.addEventListener('click', closeBag);
+  scrim.addEventListener('click', () => closeBag());
 
   drawer = document.createElement('aside');
   drawer.className = 'drawer';
@@ -29,7 +29,7 @@ function build() {
   document.body.append(scrim, drawer);
   body = $('.drawer__body', drawer);
   foot = $('.drawer__ft', drawer);
-  $('[data-close]', drawer).addEventListener('click', closeBag);
+  $('[data-close]', drawer).addEventListener('click', () => closeBag());
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && open) closeBag();
@@ -54,7 +54,7 @@ function lineHtml(l) {
         </div>
         <div style="display:flex;align-items:center;gap:12px">
           <b style="font-size:13.5px;font-weight:500">${toman(p.price * l.qty)}</b>
-          <button data-del aria-label="حذف" style="color:var(--faint);width:16px">${ICON.trash}</button>
+          <button data-del aria-label="حذف" style="color:var(--muted);width:16px">${ICON.trash}</button>
         </div>
       </div>
     </div>
@@ -86,10 +86,10 @@ export function paintBag() {
     foot.innerHTML = `
       ${away > 0 ? `
         <div class="t-fine" style="margin-block-end:var(--s4)">
-          ${toman(away)} دیگر تا <b style="color:var(--thread);font-weight:500">ارسال رایگان</b>
+          ${toman(away)} دیگر تا <b style="color:var(--thread-d);font-weight:500">ارسال رایگان</b>
           <div class="meter"><i style="width:${Math.min(100, t.sub / SHOP.freeShippingOver * 100)}%"></i></div>
         </div>` : `
-        <div class="t-fine" style="margin-block-end:var(--s4);color:var(--thread)">این سفارش ارسال رایگان دارد</div>`}
+        <div class="t-fine" style="margin-block-end:var(--s4);color:var(--thread-d)">این سفارش ارسال رایگان دارد</div>`}
       <div class="sums">
         ${t.savedOnList ? `<div class="save"><span>سود شما از تخفیف‌ها</span><span>${toman(t.savedOnList)}</span></div>` : ''}
         <div class="tot"><span>جمع کالاها</span><b>${toman(t.sub)}</b></div>
@@ -115,8 +115,8 @@ export function paintBag() {
       toast('از سبد حذف شد', 'trash');
     });
   });
-  $('[data-close2]', foot)?.addEventListener('click', closeBag);
-  $$('[data-nav]', drawer).forEach((a) => a.addEventListener('click', closeBag));
+  $('[data-close2]', foot)?.addEventListener('click', () => closeBag());
+  $$('[data-nav]', drawer).forEach((a) => a.addEventListener('click', () => closeBag()));
   settleImages(drawer);
 }
 
@@ -130,15 +130,20 @@ export function openBag() {
   drawer.classList.add('is-open');
   scrim.classList.add('is-open');
   document.body.classList.add('is-locked');
+  document.body.classList.add('tabs-away');
   open = true;
+  // Back should dismiss the drawer, not the page behind it
+  pushOverlay('bag', () => closeBag(true));
 }
 
-export function closeBag() {
+export function closeBag(fromHistory = false) {
   if (!drawer || !open) return;
   drawer.classList.remove('is-open');
   scrim.classList.remove('is-open');
   document.body.classList.remove('is-locked');
+  document.body.classList.remove('tabs-away');
   open = false;
+  if (!fromHistory) popOverlay('bag');
   setTimeout(() => { if (!open) drawer.hidden = true; }, 520);
 }
 

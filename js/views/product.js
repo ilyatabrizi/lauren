@@ -1,24 +1,16 @@
 // LAUREN — product detail.
 
-import { byId, family, PRODUCTS, SIZE_GUIDE } from '../data.js';
-import { SHOP } from '../config.js';
+import { byId, family, PRODUCTS, chartsFor, SIZE_NOTE } from '../data.js';
+import { SHOP, BRAND } from '../config.js';
+const SHOP_WA = BRAND.whatsapp;
 import {
   photo, productCard, bindCards, bindAccordions, accordion,
-  reveal, toast, ICON, lightbox, settleImages,
+  reveal, toast, ICON, lightbox, settleImages, sizeTables,
 } from '../ui.js';
 import { toman, tomanRound, esc, $, $$ } from '../util.js';
-import { addToBag, inWish, toggleWish, markViewed, tier } from '../store.js';
+import { addToBag, inWish, toggleWish, markViewed, tier, notifyMe, isNotifying } from '../store.js';
 import { openBag } from '../bag.js';
 import { go } from '../router.js';
-
-const sizeGuideTable = () => `
-  <table class="tbl">
-    <thead><tr>${SIZE_GUIDE.cols.map((c) => `<th>${esc(c)}</th>`).join('')}</tr></thead>
-    <tbody>${SIZE_GUIDE.rows.map((r) => `<tr>${r.map((c, i) =>
-      `<td${i === 0 ? ' class="lat" style="color:var(--ink)"' : ''}>${esc(c)}</td>`).join('')}</tr>`).join('')}
-    </tbody>
-  </table>
-  <p class="t-fine" style="margin-block-start:14px">${esc(SIZE_GUIDE.note)}</p>`;
 
 export default function product(ctx) {
   const p = byId(ctx.params.id);
@@ -81,13 +73,21 @@ export default function product(ctx) {
             </button>
           </div>
           <div class="sizes" role="group" aria-label="انتخاب سایز">
-            ${p.sizes.map((s) => `
-              <button class="size ${p.lowStock.includes(s) ? 'is-low' : ''}" data-size="${s}"
-                      aria-pressed="false">${s}</button>`).join('')}
+            ${p.sizes.map((s) => {
+              const n = p.stock[s] ?? 0;
+              return `<button class="size ${n === 0 ? 'is-out' : n <= 2 ? 'is-low' : ''}"
+                      data-size="${s}" ${n === 0 ? 'data-out' : ''}
+                      aria-pressed="false"
+                      aria-label="سایز ${s}${n === 0 ? ' — ناموجود' : ''}">${s}</button>`;
+            }).join('')}
           </div>
-          ${p.lowStock.length ? `<p class="t-fine" style="margin-block-start:10px">
-            <span style="color:var(--thread)">●</span> سایزهای علامت‌دار موجودی محدودی دارند
-          </p>` : ''}
+          <p class="t-fine" style="margin-block-start:10px" data-sizehint>
+            ${p.sizes.some((s) => (p.stock[s] ?? 0) === 0)
+              ? 'سایزهای خط‌خورده فعلاً ناموجودند — بزنید تا خبرتان کنیم.'
+              : p.sizes.some((s) => (p.stock[s] ?? 0) <= 2)
+                ? 'سایزهای علامت‌دار موجودی محدودی دارند.'
+                : 'همه‌ی سایزها موجود است.'}
+          </p>
         </div>
 
         <div class="pdp__buy">
@@ -102,7 +102,13 @@ export default function product(ctx) {
         <div class="trust">
           <div>${ICON.spark}<span><b>${toman(earns)} اعتبار</b> از این خرید به کیف شما برمی‌گردد — در سفارش بعدی مستقیم کم می‌شود.</span></div>
           <div>${ICON.truck}<span>ارسال رایگان بالای ${tomanRound(SHOP.freeShippingOver)} · پیک همان روز در تبریز</span></div>
-          <div>${ICON.swap}<span>تعویض سایز تا ۷ روز، رایگان</span></div>
+          <div>${ICON.swap}<span>تعویض سایز تا ۷ روز، رایگان —
+            <a class="link" href="#/shipping" style="font-size:12.5px">شرایط</a></span></div>
+          <div>${ICON.wa}<span>مطمئن نیستید کدام سایز؟
+            <a class="link" style="font-size:12.5px" target="_blank" rel="noopener"
+               href="https://wa.me/${SHOP_WA}?text=${encodeURIComponent(
+                 `سلام، درباره‌ی «${p.title}» (لارن ${p.ref} — ${p.colorName}) سوال داشتم.`)}"
+              >در واتساپ بپرسید</a></span></div>
         </div>
 
         ${accordion([
@@ -121,7 +127,8 @@ export default function product(ctx) {
                 ${SHOP.shipping.map((s) => `<li>${esc(s.label)} — ${esc(s.note)} · ${toman(s.cost)}</li>`).join('')}
                 <li>تعویض سایز تا ۷ روز پس از تحویل، به شرط استفاده‌نشدن و سالم‌بودن اتیکت</li>
               </ul>` },
-          { title: 'راهنمای سایز', body: sizeGuideTable() },
+          { title: 'راهنمای سایز', body: sizeTables(chartsFor(p), SIZE_NOTE) +
+      `<a class="link" href="#/size-guide" style="margin-block-start:var(--s2)">صفحه‌ی کامل راهنمای سایز</a>` },
         ])}
       </div>
     </div>
@@ -148,14 +155,32 @@ export default function product(ctx) {
 
       let size = null;
       const btns = $$('[data-size]', root);
-      // preselect when there is only one size on offer
-      if (btns.length === 1) { btns[0].setAttribute('aria-pressed', 'true'); size = btns[0].dataset.size; }
+      const inStock = btns.filter((b) => !('out' in b.dataset));
+      // preselect when there is only one size actually available
+      if (inStock.length === 1) {
+        inStock[0].setAttribute('aria-pressed', 'true');
+        size = inStock[0].dataset.size;
+      }
 
       btns.forEach((b) => b.addEventListener('click', () => {
+        // A sold-out size is still a real control — it takes a request to be
+        // told when it comes back, which is the only useful thing left to do.
+        if ('out' in b.dataset) {
+          const already = isNotifying(p.id, b.dataset.size);
+          if (already) return toast('قبلاً ثبت شده — خبرتان می‌کنیم', 'info');
+          notifyMe(p.id, b.dataset.size);
+          b.classList.add('is-noted');
+          toast(`سایز ${b.dataset.size} که رسید خبرتان می‌کنیم`, 'check');
+          return;
+        }
         btns.forEach((x) => x.setAttribute('aria-pressed', 'false'));
         b.setAttribute('aria-pressed', 'true');
         size = b.dataset.size;
       }));
+      // reflect any request made on a previous visit
+      btns.forEach((b) => {
+        if ('out' in b.dataset && isNotifying(p.id, b.dataset.size)) b.classList.add('is-noted');
+      });
 
       const need = () => {
         toast('اول سایز را انتخاب کنید', 'info');

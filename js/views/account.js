@@ -2,7 +2,9 @@
 
 import { SHOP, BRAND, PREVIEW } from '../config.js';
 import { PRODUCTS } from '../data.js';
-import { state, tier, signIn, signOut, saveAddress, setName } from '../store.js';
+import {
+  state, tier, signIn, signOut, saveAddress, setName, orderStage, exchangeWindow,
+} from '../store.js';
 import {
   ICON, field, fieldError, readForm, toast, productCard,
   bindCards, reveal, settleImages,
@@ -209,25 +211,35 @@ function ordersPanel() {
       <p class="t-small" style="max-width:30ch;margin-inline:auto">وقتی اولین سفارش را ثبت کنید، اینجا پیدایش می‌کنید.</p>
       <a class="btn btn--ghost btn--sm" href="#/shop" style="margin-block-start:var(--s5)">شروع خرید</a></div>`;
   }
-  return state.orders.map((o) => `
-    <div class="order">
+  return state.orders.map((o) => {
+    const prog = orderStage(o);
+    const win = exchangeWindow(o);
+    return `
+    <a class="order" href="#/order/${esc(o.id)}">
       <div class="order__hd">
         <div>
           <div class="order__id">${esc(o.id)}</div>
           <div class="t-fine">${esc(faDate(o.ts))} · ${o.items.reduce((n, i) => n + i.qty, 0)} قلم</div>
         </div>
         <div style="text-align:end">
-          <span class="order__st ok">پرداخت‌شده</span>
+          <span class="order__st ${o.cancelledAt ? '' : 'ok'}">${
+            o.cancelledAt ? 'لغو شد' : esc(prog.stage.label)}</span>
           <div style="margin-block-start:var(--s2);font-size:14px">${toman(o.totals.grand)}</div>
         </div>
       </div>
       <div class="order__thumbs">
         ${o.items.map((i) => `<span><img src="assets/products/${i.img}.jpg" alt="${esc(i.title)}" loading="lazy"></span>`).join('')}
       </div>
-      <p class="t-fine" style="margin-block-start:var(--s3)">
-        ${toman(o.earned)} اعتبار از این سفارش به کیف شما اضافه شد
-      </p>
-    </div>`).join('');
+      <div class="order__foot t-fine">
+        <span>${o.cancelledAt ? 'اعتبار برگشت داده شد'
+          : `${toman(o.earned)} اعتبار گرفتید`}</span>
+        <span>${o.exchange ? 'درخواست تعویض ثبت شده'
+          : win.open && !o.cancelledAt ? `${win.left} روز مهلت تعویض`
+          : ''}</span>
+        <span class="order__more">جزئیات و فاکتور ${ICON.back}</span>
+      </div>
+    </a>`;
+  }).join('');
 }
 
 /* ------------------------------------------------------------ wishlist --- */

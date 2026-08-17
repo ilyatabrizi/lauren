@@ -42,6 +42,10 @@ boundary below 3:1.
 | **Account** | Phone + 4-box OTP, credit wallet with a ledger, orders, wishlist, address |
 | **Wallet** | Toman credit back on every order, 3 tiers by 12-month spend, redeemable at checkout |
 | **PWA** | Installs to the home screen, works offline, app shortcuts, maskable icons |
+| **Navigation** | Frosted-glass top bar, floating glass tab pill with a spring indicator, Back dismisses overlays |
+| **Search** | Its own route, matches Persian name / colour / fabric / piece number, tolerant of ی-ي and ک-ك |
+| **Orders** | Order detail + receipt, derived delivery stages, reorder, cancel, exchange request |
+| **Pickup** | Collect at Atlas as a real checkout option — skips the address it doesn't need |
 
 ### باشگاه لارن — the wallet
 
@@ -147,6 +151,39 @@ manifest.webmanifest  PWA manifest
 
 Hash routing (`#/shop`, `#/p/polo-noir`) is deliberate: GitHub Pages needs no
 rewrite rules, and deep links keep working offline inside the installed app.
+
+### Routes
+
+```
+/              home                    /bag           the bag as a page
+/shop          catalogue               /checkout      contact, address, shipping
+/p/:id         product                 /pay           simulated gateway
+/search        search                  /thanks        confirmation
+/wishlist      saved pieces            /order/:id     order detail + receipt
+/track         look up an order        /exchange/:id  request a size exchange
+/size-guide    all three charts        /account       wallet, orders, address
+/shipping      shipping and returns    /about /contact /faq
+```
+
+Every route belongs to exactly one tab (`OWNS` in `js/app.js`) — a tab bar with
+nothing selected reads as broken.
+
+### The glass navigation
+
+The top bar is transparent while the hero owns the screen and frosts to
+`blur(22px) saturate(180%)` once anything scrolls under it. The tab bar is a
+detached pill so the page runs *beneath* it and the material has something to
+refract; its selected state is a filled pill that moves between slots on a
+spring rather than a CSS transition, which is what makes it read as native.
+Both have `@supports not (backdrop-filter)` fallbacks that go near-opaque.
+
+Note the RTL trap: `tab.offsetLeft` is measured from the container's **left**
+edge in both writing directions, so the pill is anchored with physical `left`,
+not `inset-inline-start`. Mixing the two put the bar half off screen.
+
+Back dismisses the bag drawer, the lightbox and the mobile menu instead of
+navigating the page underneath — each pushes a history entry on open and
+consumes it on close (`pushOverlay` / `popOverlay` in `js/ui.js`).
 
 ---
 

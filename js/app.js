@@ -3,7 +3,7 @@
 import { BRAND } from './config.js';
 import { route, start, setNotFound, onAfter, parse } from './router.js';
 import { bagCount, subscribe } from './store.js';
-import { ICON, reveal, settleImages } from './ui.js';
+import { ICON, reveal, settleImages, pushOverlay, popOverlay } from './ui.js';
 import { initBag, openBag } from './bag.js';
 import { $, $$, scrollTop, esc } from './util.js';
 import { logoSvg, markSvg } from './brand.js';
@@ -15,6 +15,11 @@ import checkout from './views/checkout.js';
 import pay from './views/pay.js';
 import thanks from './views/thanks.js';
 import account from './views/account.js';
+import bagPage from './views/bag.js';
+import search from './views/search.js';
+import {
+  wishlist, track, sizeGuide, shipping, orderDetail, exchange,
+} from './views/more.js';
 import { about, contact, faq, notFound } from './views/pages.js';
 
 /* ---------------------------------------------------------------- chrome -- */
@@ -38,10 +43,10 @@ function chrome() {
       <button class="iconbtn burger" data-menu aria-label="منو">${ICON.menu}</button>
       <a class="hdr__mark" href="#/" aria-label="${BRAND.name}">${logoSvg({ label: BRAND.name })}</a>
       <div class="hdr__act">
-        <a class="iconbtn" href="#/shop" aria-label="جست‌وجو">${ICON.search}</a>
-        <a class="iconbtn" href="#/account?tab=wish" aria-label="علاقه‌مندی‌ها">${ICON.heart}</a>
-        <a class="iconbtn" href="#/account" aria-label="حساب کاربری">${ICON.user}</a>
-        <button class="iconbtn" data-bag aria-label="سبد خرید">
+        <a class="iconbtn" href="#/search" aria-label="جست‌وجو">${ICON.search}</a>
+        <a class="iconbtn" href="#/wishlist" aria-label="علاقه‌مندی‌ها">${ICON.heart}</a>
+        <a class="iconbtn is-dupe" href="#/account" aria-label="حساب کاربری">${ICON.user}</a>
+        <button class="iconbtn is-dupe" data-bag aria-label="سبد خرید">
           ${ICON.bag}<span class="iconbtn__n" data-count>0</span>
         </button>
       </div>
@@ -53,7 +58,9 @@ function chrome() {
     <nav>
       <a href="#/">خانه</a>
       ${NAV.map((n, i) => `<a href="${n.href}" style="animation-delay:${(i + 1) * 55}ms">${esc(n.label)}</a>`).join('')}
-      <a href="#/faq" style="animation-delay:${(NAV.length + 1) * 55}ms">سوال‌های پرتکرار</a>
+      <a href="#/search" style="animation-delay:${(NAV.length + 1) * 55}ms">جست‌وجو</a>
+      <a href="#/track" style="animation-delay:${(NAV.length + 2) * 55}ms">پیگیری سفارش</a>
+      <a href="#/faq" style="animation-delay:${(NAV.length + 3) * 55}ms">سوال‌های پرتکرار</a>
     </nav>
     <div class="mmenu__ft">
       <span>${esc(BRAND.address)}</span>
@@ -82,6 +89,7 @@ function chrome() {
             <li><a href="#/shop?cat=knit">بافت</a></li>
             <li><a href="#/shop?cat=set">ست‌ها</a></li>
             <li><a href="#/shop?sort=new">تازه‌رسیده‌ها</a></li>
+            <li><a href="#/size-guide">راهنمای سایز</a></li>
           </ul>
         </div>
         <div>
@@ -89,7 +97,9 @@ function chrome() {
           <ul>
             <li><a href="#/account">باشگاه لارن</a></li>
             <li><a href="#/account?tab=orders">سفارش‌های من</a></li>
-            <li><a href="#/account?tab=wish">علاقه‌مندی‌ها</a></li>
+            <li><a href="#/wishlist">علاقه‌مندی‌ها</a></li>
+            <li><a href="#/track">پیگیری سفارش</a></li>
+            <li><a href="#/shipping">ارسال و مرجوعی</a></li>
             <li><a href="#/faq">سوال‌های پرتکرار</a></li>
           </ul>
         </div>
@@ -110,10 +120,11 @@ function chrome() {
     </div>
   </footer>
 
-  <nav class="tabbar">
+  <nav class="tabbar" aria-label="ناوبری اصلی">
+    <span class="tabbar__pill" aria-hidden="true"></span>
     <a href="#/" data-tabnav="/">${ICON.home}<span>خانه</span></a>
     <a href="#/shop" data-tabnav="/shop">${ICON.grid}<span>فروشگاه</span></a>
-    <a href="#/checkout" data-tabnav="/checkout" data-tabbag>${ICON.bag}<span>سبد</span>
+    <a href="#/bag" data-tabnav="/bag">${ICON.bag}<span>سبد</span>
       <span class="tabbar__n" data-count hidden>0</span></a>
     <a href="#/account" data-tabnav="/account">${ICON.user}<span>پروفایل</span></a>
   </nav>
@@ -157,12 +168,83 @@ function markActive(ctx) {
     if (on) a.setAttribute('aria-current', 'page');
     else a.removeAttribute('aria-current');
   });
+  // Which tab owns which routes. A tab must never go dim just because the
+  // shopper drilled into a product or a checkout step.
+  // Every route belongs to exactly one tab. A tab bar with nothing selected
+  // reads as broken, so the brand and policy pages are adopted too.
+  const OWNS = {
+    '/': ['/', '/about', '/contact'],
+    '/shop': ['/shop', '/search', '/size-guide', '/shipping', '/faq'],
+    '/bag': ['/bag', '/checkout', '/pay', '/thanks'],
+    '/account': ['/account', '/wishlist', '/track'],
+  };
+  let active = null;
   $$('[data-tabnav]').forEach((a) => {
-    const on = a.dataset.tabnav === path ||
-               (a.dataset.tabnav === '/shop' && path.startsWith('/p/'));
-    if (on) a.setAttribute('aria-current', 'page');
+    const own = OWNS[a.dataset.tabnav] || [a.dataset.tabnav];
+    const on = own.includes(path)
+      || (a.dataset.tabnav === '/shop' && path.startsWith('/p/'))
+      || (a.dataset.tabnav === '/account'
+          && (path.startsWith('/order/') || path.startsWith('/exchange/')));
+    if (on) { a.setAttribute('aria-current', 'page'); active = a; }
     else a.removeAttribute('aria-current');
   });
+  movePill(active);
+}
+
+/* --------------------------------------------------------- the glass pill -- */
+/* The selected tab is a filled pill that slides between slots on a spring.
+   A CSS transition on `inset-inline-start` would ease linearly out of the old
+   slot; a spring carries momentum, which is what makes it feel iOS-native. */
+let pillSpring = null;
+
+function spring(apply) {
+  let x = 0, v = 0, target = 0, raf = 0;
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const step = (resp, damp) => {
+    let last = 0;
+    const frame = (t) => {
+      if (!last) last = t;
+      const dt = Math.min((t - last) / 1000, 0.064); last = t;
+      const w = (2 * Math.PI) / resp;
+      const n = Math.max(1, Math.ceil(dt / (1 / 240))), h = dt / n;
+      for (let i = 0; i < n; i++) {
+        const a = -w * w * (x - target) - 2 * damp * w * v;
+        v += a * h; x += v * h;
+      }
+      apply(x);
+      if (Math.abs(x - target) < 0.3 && Math.abs(v) < 0.6) {
+        x = target; v = 0; apply(x); raf = 0; return;
+      }
+      raf = requestAnimationFrame(frame);
+    };
+    if (!raf) raf = requestAnimationFrame(frame);
+  };
+  return {
+    set(to) { if (raf) cancelAnimationFrame(raf); raf = 0; x = to; v = 0; apply(x); },
+    to(to) {
+      target = to;
+      if (reduced) { this.set(to); return; }
+      step(0.34, 0.82);
+    },
+  };
+}
+
+function movePill(tab) {
+  const pill = $('.tabbar__pill');
+  if (!pill) return;
+  if (!tab) { pill.style.opacity = '0'; return; }
+  const bar = tab.closest('.tabbar');
+  // hidden bars measure 0 — wait until it is laid out or the pill lands at 0
+  if (!bar || !bar.offsetWidth) { pill.style.opacity = '0'; return; }
+  const x = tab.offsetLeft - 5;
+  pill.style.width = `${tab.offsetWidth}px`;
+  pill.style.opacity = '1';
+  if (!pillSpring) {
+    pillSpring = spring((v) => { pill.style.transform = `translateX(${v}px)`; });
+    pillSpring.set(x);
+    return;
+  }
+  pillSpring.to(x);
 }
 
 /* ------------------------------------------------------------------ pwa -- */
@@ -218,31 +300,52 @@ function boot() {
   route('/pay',         pay);
   route('/thanks',      thanks);
   route('/account',     account);
+  route('/bag',         bagPage);
+  route('/search',      search);
+  route('/wishlist',    wishlist);
+  route('/track',       track);
+  route('/order/:id',   orderDetail);
+  route('/exchange/:id', exchange);
+  route('/size-guide',  sizeGuide);
+  route('/shipping',    shipping);
   route('/about',       about);
   route('/contact',     contact);
   route('/faq',         faq);
   setNotFound(notFound);
 
-  // header state
-  const hdr = $('.hdr');
-  const onScroll = () => hdr.classList.toggle('is-stuck', scrollY > 12);
+  // The glass lives on .topbar (it wraps the header), so the frosted state has
+  // to be toggled there — on .hdr it matched nothing.
+  const bar = $('.topbar');
+  const onScroll = () => bar.classList.toggle('is-stuck', scrollY > 12);
   addEventListener('scroll', onScroll, { passive: true });
   onScroll();
 
-  // bag
+  // The header icon opens the drawer for a quick look; the tab goes to the
+  // full /bag route, because a tab that sometimes opens a sheet and sometimes
+  // navigates is the kind of inconsistency that makes an app feel unfinished.
   $('[data-bag]').addEventListener('click', openBag);
-  $('[data-tabbag]').addEventListener('click', (e) => {
-    if (bagCount()) { e.preventDefault(); openBag(); }
-  });
+
+  // the pill has no width until the bar is laid out, and slots move on resize
+  const remeasure = () => movePill($('.tabbar a[aria-current="page"]'));
+  addEventListener('resize', remeasure);
+  addEventListener('orientationchange', remeasure);
+  if (document.fonts?.ready) document.fonts.ready.then(remeasure);
 
   // mobile menu
   const menu = $('[data-mmenu]');
-  const closeMenu = () => { menu.classList.remove('is-open'); document.body.classList.remove('is-locked'); };
+  const closeMenu = (fromHistory = false) => {
+    if (!menu.classList.contains('is-open')) return;
+    menu.classList.remove('is-open');
+    document.body.classList.remove('is-locked');
+    if (!fromHistory) popOverlay('menu');
+  };
   $('[data-menu]').addEventListener('click', () => {
-    menu.classList.add('is-open'); document.body.classList.add('is-locked');
+    menu.classList.add('is-open');
+    document.body.classList.add('is-locked');
+    pushOverlay('menu', () => closeMenu(true));
   });
-  $('[data-mclose]').addEventListener('click', closeMenu);
-  $$('[data-mmenu] a').forEach((a) => a.addEventListener('click', closeMenu));
+  $('[data-mclose]').addEventListener('click', () => closeMenu());
+  $$('[data-mmenu] a').forEach((a) => a.addEventListener('click', () => closeMenu()));
   addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); });
 
   // counts
@@ -262,6 +365,14 @@ function boot() {
       '/checkout': `تسویه حساب | ${BRAND.name}`,
       '/pay': `درگاه پرداخت | ${BRAND.name}`,
       '/account': `حساب کاربری | ${BRAND.name}`,
+      '/bag': `سبد خرید | ${BRAND.name}`,
+      '/search': `جست‌وجو | ${BRAND.name}`,
+      '/wishlist': `علاقه‌مندی‌ها | ${BRAND.name}`,
+      '/track': `پیگیری سفارش | ${BRAND.name}`,
+      '/order': `سفارش | ${BRAND.name}`,
+      '/exchange': `تعویض سایز | ${BRAND.name}`,
+      '/size-guide': `راهنمای سایز | ${BRAND.name}`,
+      '/shipping': `ارسال و مرجوعی | ${BRAND.name}`,
       '/about': `درباره‌ی لارن | ${BRAND.name}`,
       '/contact': `تماس | ${BRAND.name}`,
       '/faq': `راهنما | ${BRAND.name}`,

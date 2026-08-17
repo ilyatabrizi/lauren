@@ -67,7 +67,9 @@
   --sab: env(safe-area-inset-bottom, 0px);
   --hdr-h: 60px;
   --top-h: calc(var(--sat) + var(--hdr-h));
-  --tab-h: calc(56px + var(--sab));
+  /* the floating pill's height plus the gap under it — the space content
+     has to clear at the bottom of the viewport */
+  --tab-h: calc(58px + 12px + var(--sab));
 }
 
 /* ------------------------------------------------------------------ base -- */
@@ -221,14 +223,26 @@ a { color: inherit; text-decoration: none; }
 }
 
 /* ============================================================== header === */
+/* Glass, iOS-style: transparent while the hero owns the screen, then a
+   translucent frosted slab once anything scrolls under it. The blur is what
+   sells it — the fallback below keeps it readable where it isn't supported. */
 .topbar {
   position: fixed; inset-block-start: 0; inset-inline: 0; z-index: 90;
   padding-block-start: var(--sat);
-  background: var(--paper);
+  background: transparent;
   border-block-end: 1px solid transparent;
-  transition: border-color .3s var(--ease), background .3s var(--ease);
+  transition: background .38s var(--ease), border-color .38s var(--ease),
+              -webkit-backdrop-filter .38s var(--ease), backdrop-filter .38s var(--ease);
 }
-.topbar.is-stuck { border-block-end-color: var(--rule); }
+.topbar.is-stuck {
+  background: rgba(239, 238, 233, .72);
+  border-block-end-color: rgba(22, 24, 28, .09);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  backdrop-filter: blur(22px) saturate(180%);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .topbar.is-stuck { background: rgba(239, 238, 233, .97); }
+}
 
 .hdr { height: var(--hdr-h); display: flex; align-items: center; }
 .hdr__in {
@@ -421,9 +435,14 @@ main { min-height: 60vh; }
 /* ================================================================ shop === */
 .shopbar {
   position: sticky; inset-block-start: var(--top-h); z-index: 40;
-  background: var(--paper);
+  background: rgba(239, 238, 233, .82);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
   border-block-end: 1px solid var(--rule);
   padding-block: var(--s3);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .shopbar { background: var(--paper); }
 }
 .shopbar__in {
   display: flex; align-items: center; gap: var(--s2);
@@ -502,6 +521,20 @@ main { min-height: 60vh; }
   content: ''; position: absolute; inset-block-start: 5px; inset-inline-end: 5px;
   width: 5px; height: 5px; background: var(--thread);
 }
+/* Sold out, but still a control: tapping it asks to be told when it returns. */
+.size.is-out {
+  color: var(--muted); border-style: dashed; background: var(--paper-2);
+  text-decoration: line-through; text-decoration-thickness: 1px;
+}
+.size.is-out:hover { border-color: var(--edge); color: var(--ink); }
+.size.is-noted {
+  border-style: solid; border-color: var(--thread); color: var(--thread-d);
+  text-decoration: none; background: var(--vitrine);
+}
+.size.is-noted::after {
+  content: ''; position: absolute; inset-block-start: 5px; inset-inline-end: 5px;
+  width: 5px; height: 5px; border-radius: 50%; background: var(--thread);
+}
 
 .pdp__buy { display: grid; gap: var(--s2); margin-block-start: var(--s6); }
 .pdp__buy .row { display: grid; grid-template-columns: 1fr auto; gap: var(--s2); }
@@ -533,19 +566,105 @@ main { min-height: 60vh; }
 .tbl tr:last-child td { border: 0; }
 .tbl tbody tr:nth-child(odd) { background: var(--paper-2); }
 
+/* ============================================================== search === */
+.searchbox {
+  position: relative; display: flex; align-items: center;
+  background: var(--vitrine); border: 1px solid var(--edge);
+}
+.searchbox:focus-within { box-shadow: inset 0 0 0 1px var(--ink); border-color: var(--ink); }
+.searchbox__i {
+  width: 20px; margin-inline-start: var(--s4); color: var(--muted); flex: none;
+}
+.searchbox input {
+  flex: 1; min-width: 0; height: 56px; padding-inline: var(--s3);
+  background: none; border: 0; font-size: 16px; color: var(--ink);
+}
+.searchbox input:focus { outline: none; }
+.searchbox input::placeholder { color: var(--muted); }
+.searchbox input::-webkit-search-cancel-button { display: none; }
+.searchbox__x {
+  width: 44px; height: 44px; display: grid; place-items: center;
+  color: var(--muted); flex: none;
+}
+.searchbox__x:hover { color: var(--ink); }
+.searchbox__x svg { width: 16px; height: 16px; }
+
+.chips { display: flex; gap: var(--s2); flex-wrap: wrap; }
+
+/* ============================================================ bag page === */
+.bagline {
+  position: relative;
+  display: grid; grid-template-columns: 84px 1fr; gap: var(--s4);
+  padding: var(--s4); padding-inline-end: var(--s7);
+  border-block-end: 1px solid var(--rule);
+}
+.bagline:last-child { border-block-end: 0; }
+.bagline__img { background: var(--vitrine); border: 1px solid var(--rule); padding: 5px; align-self: start; }
+.bagline__img > div { aspect-ratio: 4/5; overflow: hidden; }
+.bagline__img img { width: 100%; height: 100%; object-fit: cover; }
+.bagline__body { display: flex; flex-direction: column; justify-content: space-between; gap: var(--s3); min-width: 0; }
+.bagline__t { display: block; font-size: 15px; font-weight: 500; }
+.bagline__foot { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); flex-wrap: wrap; }
+.bagline__price { text-align: end; }
+.bagline__price b { font-size: 15px; font-weight: 500; }
+.bagline__price span { display: block; }
+.bagline__x {
+  position: absolute; inset-block-start: var(--s3); inset-inline-end: var(--s3);
+  width: 30px; height: 30px; display: grid; place-items: center; color: var(--muted);
+}
+.bagline__x:hover { color: var(--thread-d); }
+.bagline__x svg { width: 15px; height: 15px; }
+@media (max-width: 560px) {
+  .bagline { grid-template-columns: 70px 1fr; gap: var(--s3); padding-inline-end: var(--s6); }
+  .bagline__foot { gap: var(--s2); }
+}
+
+/* ============================================================== track === */
+.track { display: grid; gap: 0; }
+.track__step {
+  position: relative; display: grid; grid-template-columns: 26px 1fr; gap: var(--s4);
+  padding-block-end: var(--s5);
+}
+.track__step:last-child { padding-block-end: 0; }
+/* the spine, drawn between dots rather than behind them */
+.track__step:not(:last-child)::before {
+  content: ''; position: absolute; inset-block: 26px 0;
+  inset-inline-start: 12px; width: 1px; background: var(--rule);
+}
+.track__step.is-done:not(:last-child)::before { background: var(--ink); }
+.track__dot {
+  width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+  border: 1px solid var(--edge); background: var(--vitrine); color: var(--paper);
+  position: relative; z-index: 1;
+}
+.track__dot svg { width: 13px; height: 13px; stroke-width: 2.2; }
+.track__step.is-done .track__dot { background: var(--ink); border-color: var(--ink); }
+.track__step.is-now .track__dot { border-color: var(--thread); box-shadow: 0 0 0 3px rgba(194,65,12,.16); }
+.track__step b { display: block; font-size: 14.5px; font-weight: 500; }
+.track__step.is-done b, .track__step.is-now b { color: var(--ink); }
+.track__step:not(.is-done):not(.is-now) b { color: var(--muted); font-weight: 400; }
+
 /* ================================================================= bag === */
 .drawer {
   position: fixed; inset-block: 0; inset-inline-end: 0; z-index: 120;
   width: min(430px, 100vw); display: flex; flex-direction: column;
-  background: var(--paper); border-inline-start: 1px solid var(--rule);
+  background: rgba(239, 238, 233, .88);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  backdrop-filter: blur(28px) saturate(180%);
+  border-inline-start: 1px solid rgba(255, 255, 255, .6);
+  box-shadow: -18px 0 46px rgba(22, 24, 28, .12);
   padding-block-start: var(--sat);
   transform: translateX(var(--off, 100%));
   transition: transform .46s var(--ease-o);
 }
 [dir='rtl'] .drawer { --off: -100%; }
 .drawer.is-open { transform: none; }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .drawer { background: var(--paper); }
+}
 .scrim {
-  position: fixed; inset: 0; z-index: 110; background: rgba(22,24,28,.42);
+  position: fixed; inset: 0; z-index: 110; background: rgba(22,24,28,.34);
+  -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
   opacity: 0; pointer-events: none; transition: opacity .4s var(--ease);
 }
 .scrim.is-open { opacity: 1; pointer-events: auto; }
@@ -741,8 +860,19 @@ body.on-gateway .a2hs, body.on-gateway .ft { display: none; }
 .acct__nav button.is-on svg { color: var(--thread); }
 .acct__nav .n { margin-inline-start: auto; font-size: 11.5px; color: var(--muted); }
 
-.order { background: var(--vitrine); border: 1px solid var(--rule); padding: var(--s4); }
+.order {
+  display: block; background: var(--vitrine); border: 1px solid var(--rule);
+  padding: var(--s4); transition: border-color .22s var(--ease);
+}
+a.order:hover { border-color: var(--edge); }
 .order + .order { margin-block-start: var(--s3); }
+.order__foot {
+  display: flex; gap: var(--s3); flex-wrap: wrap; align-items: center;
+  margin-block-start: var(--s3); padding-block-start: var(--s3);
+  border-block-start: 1px solid var(--rule);
+}
+.order__more { margin-inline-start: auto; display: inline-flex; align-items: center; gap: 5px; color: var(--ink); font-weight: 500; }
+.order__more svg { width: 13px; height: 13px; }
 .order__hd { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--s3); flex-wrap: wrap; }
 .order__id { font-family: 'YekanLat', sans-serif; font-size: 13px; letter-spacing: .06em; }
 .order__st { font-size: 11.5px; padding: 3px var(--s2); border: 1px solid var(--edge); color: var(--muted); }
@@ -779,27 +909,76 @@ body.on-gateway .a2hs, body.on-gateway .ft { display: none; }
 @keyframes toastIn  { from { opacity: 0; transform: translateY(12px); } }
 @keyframes toastOut { to   { opacity: 0; transform: translateY(6px); } }
 
+/* ---------------------------------------------------- floating glass tabs -- */
+/* A detached pill rather than a docked bar: the page runs under it, so the
+   material has something to refract, which is the whole point of glass. */
 .tabbar {
-  position: fixed; inset-block-end: 0; inset-inline: 0; z-index: 95;
-  height: var(--tab-h); padding-block-end: var(--sab);
-  display: none; grid-template-columns: repeat(4, 1fr);
-  background: var(--paper); border-block-start: 1px solid var(--rule);
+  position: fixed; z-index: 95;
+  inset-inline: 0; margin-inline: auto;
+  inset-block-end: calc(var(--sab) + 12px);
+  width: min(420px, calc(100vw - 24px));
+  height: 58px;
+  display: none; grid-auto-flow: column; grid-auto-columns: 1fr;
+  padding: 5px;
+  border-radius: 22px;
+  background: rgba(252, 252, 250, .62);
+  border: 1px solid rgba(255, 255, 255, .7);
+  /* a bright top edge is light catching the surface; the dark underside is
+     the slab's thickness. Without both it reads as a flat translucent box. */
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .9),
+    inset 0 -1px 0 rgba(22, 24, 28, .05),
+    0 10px 34px rgba(22, 24, 28, .13),
+    0 2px 8px rgba(22, 24, 28, .07);
+  -webkit-backdrop-filter: blur(26px) saturate(190%);
+  backdrop-filter: blur(26px) saturate(190%);
+  transition: transform .42s var(--ease-o), opacity .26s var(--ease);
 }
-.tabbar a { display: grid; place-items: center; gap: 2px; font-size: 10px; color: var(--muted); position: relative; }
-.tabbar a svg { width: 20px; height: 20px; stroke-width: 1.5; }
-.tabbar a[aria-current='page'] { color: var(--ink); }
-.tabbar a[aria-current='page'] svg { color: var(--thread); }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .tabbar { background: rgba(250, 250, 248, .98); }
+}
+/* out of the way while a sheet or the keyboard owns the screen */
+body.tabs-away .tabbar {
+  transform: translateY(calc(100% + 22px));
+  opacity: 0; pointer-events: none;
+}
+
+.tabbar__pill {
+  position: absolute; top: 5px; left: 0;   /* left, to match offsetLeft */
+  height: calc(100% - 10px); border-radius: 17px;
+  background: var(--ink);
+  opacity: 0; pointer-events: none;
+  transition: opacity .2s var(--ease);
+  will-change: transform, width;
+}
+.tabbar a {
+  position: relative; z-index: 1;
+  display: grid; place-items: center; gap: 3px;
+  border-radius: 17px; font-size: 9.5px; color: var(--muted);
+  transition: color .24s var(--ease), transform .12s ease-out;
+  -webkit-tap-highlight-color: transparent;
+}
+.tabbar a svg { width: 20px; height: 20px; stroke-width: 1.6; }
+.tabbar a:active { transform: scale(.94); }
+.tabbar a[aria-current='page'] { color: var(--paper); font-weight: 500; }
 .tabbar__n {
-  position: absolute; inset-block-start: 5px; margin-inline-start: 20px;
+  position: absolute; inset-block-start: 4px; margin-inline-start: 21px;
   min-width: 15px; height: 15px; padding-inline: 3px; display: grid; place-items: center;
   background: var(--thread); color: #fff; font-size: 9px; font-weight: 600; line-height: 1;
+  border-radius: 999px; box-shadow: 0 0 0 1.5px rgba(252, 252, 250, .8);
 }
 
 .mmenu {
-  position: fixed; inset: 0; z-index: 130; background: var(--paper);
+  position: fixed; inset: 0; z-index: 130;
+  background: rgba(239, 238, 233, .82);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  backdrop-filter: blur(30px) saturate(180%);
   padding: calc(var(--sat) + var(--s7)) var(--pad) var(--s7);
   display: grid; align-content: center;
   opacity: 0; pointer-events: none; transition: opacity .3s var(--ease);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .mmenu { background: var(--paper); }
 }
 .mmenu.is-open { opacity: 1; pointer-events: auto; }
 .mmenu nav { display: grid; gap: var(--s1); }
@@ -873,6 +1052,9 @@ body.on-gateway .a2hs, body.on-gateway .ft { display: none; }
   .nav { display: none; }
   .burger { display: grid; }
   .tabbar { display: grid; }
+  /* the tab bar already carries these two — a second copy in the header is
+     just clutter on a 390px screen */
+  .iconbtn.is-dupe { display: none; }
   body.has-tabbar main { padding-block-end: var(--s5); }
   body.has-tabbar .toast { inset-block-end: calc(var(--tab-h) + var(--s3)); }
   body.has-tabbar .a2hs  { inset-block-end: calc(var(--tab-h) + var(--s2)); }

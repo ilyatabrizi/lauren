@@ -21,9 +21,13 @@ export const SHOP = {
   currency: 'تومان',
   freeShippingOver: 5_000_000,
   shipping: [
-    { id: 'peyk', label: 'پیک اختصاصی تبریز', note: 'تحویل همان روز', cost: 180_000 },
-    { id: 'pishtaz', label: 'پست پیشتاز', note: '۲ تا ۴ روز کاری', cost: 320_000 },
-    { id: 'tipax', label: 'تیپاکس', note: '۱ تا ۳ روز کاری', cost: 450_000 },
+    { id: 'peyk', label: 'پیک اختصاصی تبریز', note: 'تحویل همان روز', cost: 180_000, days: [0, 1] },
+    { id: 'pishtaz', label: 'پست پیشتاز', note: '۲ تا ۴ روز کاری', cost: 320_000, days: [2, 4],
+      track: 'https://tracking.post.ir/' },
+    { id: 'tipax', label: 'تیپاکس', note: '۱ تا ۳ روز کاری', cost: 450_000, days: [1, 3],
+      track: 'https://tipaxco.com/' },
+    { id: 'pickup', label: 'تحویل حضوری در اطلس', note: 'پرو در فروشگاه · آماده تا ۲ ساعت',
+      cost: 0, pickup: true, days: [0, 0] },
   ],
   gateways: [
     { id: 'saman', label: 'بانک سامان', sub: 'درگاه مستقیم' },
@@ -62,6 +66,30 @@ export const SHOP = {
     { id: 'gold',   name: 'طلایی',   minSpend: 60_000_000, rate: 0.10,
       perk: 'دسترسی زودهنگام به کالکشن · نوبت پرو اختصاصی' },
   ],
+
+  /* The order lifecycle. This preview has no courier feed, so the stage is
+   * derived from how long ago the order was placed — but it is derived in ONE
+   * place (orderStage in store.js) so the account card, the tracker and the
+   * receipt can never disagree. Real integration replaces that one function. */
+  stages: [
+    { key: 'paid',    label: 'پرداخت شد',              note: 'سفارش ثبت و پرداخت شد',      afterHours: 0 },
+    { key: 'packing', label: 'آماده‌سازی در فروشگاه',   note: 'بسته‌بندی و کنترل نهایی',     afterHours: 1 },
+    { key: 'sent',    label: 'تحویل به پست',            note: 'کد رهگیری پیامک می‌شود',      afterHours: 6 },
+    { key: 'done',    label: 'تحویل به شما',            note: '',                            afterHours: 48 },
+  ],
+  // the pickup flow has its own wording — nothing is posted
+  stagesPickup: [
+    { key: 'paid',    label: 'پرداخت شد',              note: 'سفارش ثبت و پرداخت شد',      afterHours: 0 },
+    { key: 'packing', label: 'آماده‌سازی در فروشگاه',   note: 'کنترل نهایی و کنار گذاشتن',   afterHours: 1 },
+    { key: 'ready',   label: 'آماده‌ی تحویل در اطلس',   note: 'هر روز ۱۰ تا ۲۲',            afterHours: 2 },
+    { key: 'done',    label: 'تحویل گرفتید',            note: '',                            afterHours: 72 },
+  ],
+
+  exchange: {
+    days: 7,
+    daysSilver: 14,
+    reasons: ['کوچک بود', 'بزرگ بود', 'ایراد دوخت', 'با تصویر تفاوت داشت', 'نظرم عوض شد'],
+  },
 
   coupons: {
     LAUREN10: { type: 'percent', value: 10, label: '۱۰٪ تخفیف' },

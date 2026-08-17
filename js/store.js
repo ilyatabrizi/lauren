@@ -2,7 +2,7 @@
 // Everything persists to localStorage; this preview has no server.
 
 import { SHOP } from './config.js';
-import { byId } from './data.js';
+import { byId, PRODUCTS } from './data.js';
 import { uid, clamp } from './util.js';
 
 const KEY = 'lauren.v3';
@@ -22,6 +22,7 @@ const blank = () => ({
   // phone numbers mints an unlimited welcome balance into one pot.
   accounts: {},     // phone -> { credit, spend12, ledger, orders, addresses, name, joined }
   recent: [],
+  notify: [],       // 'productId|size' the shopper asked to be told about
   coupon: null,
 });
 
@@ -227,6 +228,94 @@ export function totals({ shippingId, useCredit = 0, coupon = state.coupon } = {}
 }
 
 /* ----------------------------------------------------------------- orders */
+/** The one place that decides what an order is doing.
+ *  Every screen reads this, so the account card, the tracker and the receipt
+ *  can never disagree. Swap the body for a courier feed and they all follow. */
+export function orderStage(o) {
+  const ship = SHOP.shipping.find((x) => x.id === o.shippingId);
+  const stages = ship?.pickup ? SHOP.stagesPickup : SHOP.stages;
+  if (o.cancelledAt) return { stages, at: -1, cancelled: true, stage: null };
+  const hours = (Date.now() - o.ts) / 36e5;
+  let at = 0;
+  stages.forEach((st, i) => { if (hours >= st.afterHours) at = i; });
+  return { stages, at, cancelled: false, stage: stages[at] };
+}
+
+/** Cancellable only while it has not left the shop. */
+export const canCancel = (o) => !o.cancelledAt && orderStage(o).at <= 1;
+
+export function cancelOrder(id) {
+  const o = state.orders.find((x) => x.id === id);
+  if (!o || !canCancel(o)) return false;
+  o.cancelledAt = Date.now();
+  // put back what the order took, and undo what it earned
+  if (o.totals.creditUsed) {
+    state.credit += o.totals.creditUsed;
+    state.ledger.unshift({
+      ts: Date.now(), kind: 'refund', amount: o.totals.creditUsed,
+      note: 'بازگشت اعتبار — لغو سفارش', ref: o.id,
+    });
+  }
+  if (o.earned) {
+    state.credit = Math.max(0, state.credit - o.earned);
+    state.ledger.unshift({
+      ts: Date.now() + 1, kind: 'reverse', amount: -o.earned,
+      note: 'برگشت اعتبار خرید — لغو سفارش', ref: o.id,
+    });
+  }
+  state.spend12 = Math.max(0, state.spend12 - Math.max(0, o.totals.goods - o.totals.creditUsed));
+  commit('order:cancel');
+  return true;
+}
+
+/** How long is left to ask for an exchange, in days. */
+export function exchangeWindow(o) {
+  const days = tier().tier.id === 'member' ? SHOP.exchange.days : SHOP.exchange.daysSilver;
+  const stage = orderStage(o);
+  const delivered = stage.stages[stage.at]?.key === 'done';
+  const left = days - Math.floor((Date.now() - o.ts) / 864e5);
+  return { days, left, open: !o.cancelledAt && left > 0, delivered };
+}
+
+export function requestExchange(orderId, { itemIndex, toSize, reason }) {
+  const o = state.orders.find((x) => x.id === orderId);
+  if (!o || !exchangeWindow(o).open) return null;
+  const item = o.items[itemIndex];
+  if (!item) return null;
+  o.exchange = {
+    requestedAt: Date.now(), itemIndex,
+    title: item.title, ref: item.ref,
+    fromSize: item.size, toSize, reason, status: 'requested',
+  };
+  commit('order:exchange');
+  return o.exchange;
+}
+
+/** Put a past order back in the bag, skipping anything no longer sold. */
+export function reorder(orderId) {
+  const o = state.orders.find((x) => x.id === orderId);
+  if (!o) return { added: 0, skipped: [] };
+  let added = 0; const skipped = [];
+  o.items.forEach((i) => {
+    const p = byId(i.id);
+    if (!p || !p.sizes.includes(i.size)) { skipped.push(i.title); return; }
+    const line = state.bag.find((l) => l.id === i.id && l.size === i.size);
+    if (line) line.qty = Math.min(10, line.qty + i.qty);
+    else state.bag.push({ id: i.id, size: i.size, qty: Math.min(10, i.qty) });
+    added += 1;
+  });
+  if (added) commit('bag:add');
+  return { added, skipped };
+}
+
+/** Ask to be told when a size comes back. Kept per product+size. */
+export function notifyMe(id, size) {
+  state.notify = state.notify || [];
+  const key = `${id}|${size}`;
+  if (!state.notify.includes(key)) { state.notify.push(key); commit('notify'); return true; }
+  return false;
+}
+export const isNotifying = (id, size) => (state.notify || []).includes(`${id}|${size}`);
 export function placeOrder({ address, shippingId, gateway, t, ref }) {
   const order = {
     id: uid('LR'),

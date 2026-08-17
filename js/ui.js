@@ -42,6 +42,38 @@ export const ICON = {
   ruler:  svg('<path d="m3.5 14.5 11-11 5 5-11 11-5-5Z"/><path d="m7 11 1.8 1.8M10 8l1.8 1.8M13 5l1.8 1.8"/>'),
 };
 
+/* ------------------------------------------------------- overlay history -- */
+/* On a phone, Back is how you dismiss things. Without this, pressing it while
+   the bag drawer or the lightbox is open navigates the page underneath and
+   leaves the overlay sitting on top of the wrong screen.
+   Each overlay pushes a history entry on open and consumes it on close, so
+   Back closes exactly one layer and never leaves the stack out of step. */
+const layers = [];
+
+export function pushOverlay(name, close) {
+  layers.push({ name, close });
+  // same URL, new entry — no hashchange, so the router does not re-render
+  history.pushState({ laurenOverlay: name, depth: layers.length }, '');
+}
+
+/** Call from the overlay's own close path (X, scrim, Escape). */
+export function popOverlay(name) {
+  const i = layers.findIndex((l) => l.name === name);
+  if (i < 0) return false;
+  layers.splice(i, 1);
+  // rewind the entry we added, without letting popstate close it twice
+  skipNextPop = true;
+  history.back();
+  return true;
+}
+
+let skipNextPop = false;
+addEventListener('popstate', () => {
+  if (skipNextPop) { skipNextPop = false; return; }
+  const top = layers.pop();
+  if (top) top.close();
+});
+
 /* --------------------------------------------------------------- toasts -- */
 let toastHost;
 export function toast(msg, icon = 'check') {
@@ -173,14 +205,36 @@ export function lightbox(src, alt = '') {
     lb.addEventListener('click', () => close());
     document.body.appendChild(lb);
   }
-  const close = () => { lb.classList.remove('is-open'); document.body.classList.remove('is-locked'); };
+  const close = (fromHistory = false) => {
+    lb.classList.remove('is-open');
+    document.body.classList.remove('is-locked');
+    if (!fromHistory) popOverlay('lightbox');
+  };
   lb.querySelector('img').src = src;
   lb.querySelector('img').alt = alt;
   lb.classList.add('is-open');
   document.body.classList.add('is-locked');
+  pushOverlay('lightbox', () => close(true));
   document.addEventListener('keydown', function esc2(e) {
     if (e.key === 'Escape') { close(); document.removeEventListener('keydown', esc2); }
   });
+}
+
+/* ----------------------------------------------------------- size charts -- */
+/** One renderer, so the product accordion and /size-guide can never drift. */
+export function sizeTables(charts, note) {
+  return charts.map((c) => `
+    <div style="margin-block-end:var(--s4)">
+      <b style="display:block;font-size:13px;font-weight:500;margin-block-end:var(--s2)">${esc(c.name)}</b>
+      <div style="overflow-x:auto">
+        <table class="tbl">
+          <thead><tr>${c.cols.map((h) => `<th>${esc(h)}</th>`).join('')}</tr></thead>
+          <tbody>${c.rows.map((r) => `<tr>${r.map((v, i) =>
+            `<td${i === 0 ? ' class="lat" style="color:var(--ink);font-weight:500"' : ''}>${esc(v)}</td>`
+          ).join('')}</tr>`).join('')}</tbody>
+        </table>
+      </div>
+    </div>`).join('') + (note ? `<p class="t-fine">${esc(note)}</p>` : '');
 }
 
 /* --------------------------------------------------------------- fields -- */

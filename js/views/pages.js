@@ -2,8 +2,12 @@
 
 import { BRAND, SHOP } from '../config.js';
 import { FAQ } from '../data.js';
-import { accordion, bindAccordions, reveal, photo, ICON, settleImages } from '../ui.js';
-import { esc, toman } from '../util.js';
+import {
+  accordion, bindAccordions, reveal, photo, ICON, settleImages,
+  field, fieldError, readForm, toast,
+} from '../ui.js';
+import { esc, toman, faDate, validPhone, $ } from '../util.js';
+import { state } from '../store.js';
 
 /* ---------------------------------------------------------------- about -- */
 export function about() {
@@ -87,7 +91,8 @@ export function contact() {
             <div class="trust">
               <div>${ICON.pin}<span>${esc(BRAND.address)}</span></div>
               <div>${ICON.clock}<span>${esc(BRAND.hours)}</span></div>
-              <div>${ICON.phone}<span class="lat" dir="ltr">${esc(BRAND.phone)}</span></div>
+              <div>${ICON.phone}<span><a class="link lat" dir="ltr"
+              href="tel:${BRAND.phone.replace(/\D/g, '')}">${esc(BRAND.phone)}</a></span></div>
             </div>
             <div style="display:flex;gap:10px;flex-wrap:wrap;margin-block-start:24px">
               <a class="btn btn--sm" target="_blank" rel="noopener"
@@ -115,6 +120,33 @@ export function contact() {
 
         <aside class="summary">
           <div class="panel">
+            <h3>پیام بگذارید</h3>
+            <p class="t-fine" style="margin-block-end:var(--s4)">
+              پیام شما با واتساپ فروشگاه باز می‌شود — همان‌جا جواب می‌گیرید.
+            </p>
+            <div class="fields" data-msgform>
+              ${field('cname', 'نام', { value: state.user?.name || '' })}
+              ${field('cphone', 'شماره تماس', {
+                value: state.user?.phone || '', dir: 'ltr', inputmode: 'numeric', maxlength: 11 })}
+              ${state.orders.length ? `
+              <div class="field" data-field="corder">
+                <label for="f-corder">درباره‌ی سفارش (اختیاری)</label>
+                <select id="f-corder" name="corder">
+                  <option value="">— انتخاب نشده —</option>
+                  ${state.orders.slice(0, 8).map((o) => `
+                    <option value="${esc(o.id)}">${esc(o.id)} · ${esc(faDate(o.ts))}</option>`).join('')}
+                </select>
+                <span class="err"></span>
+              </div>` : ''}
+              ${field('cmsg', 'پیام', { type: 'textarea', wide: true,
+                placeholder: 'مثلاً: قدم ۱۸۰ و وزنم ۷۸ است، کدام سایز مناسبم است؟' })}
+            </div>
+            <button class="btn btn--block btn--sm" data-send style="margin-block-start:var(--s3)">
+              فرستادن در واتساپ
+            </button>
+          </div>
+
+          <div class="panel">
             <h3>ما را دنبال کنید</h3>
             <p class="t-fine" style="margin-block-end:18px">
               هر روز یک استایل تازه در اینستاگرام — قبل از اینکه به سایت برسد.
@@ -129,7 +161,26 @@ export function contact() {
         </aside>
       </div>
     </div>`,
-    mount(root) { reveal(root); },
+    mount(root) {
+      reveal(root);
+      $('[data-send]', root)?.addEventListener('click', () => {
+        const f = readForm(root);
+        if (!f.cmsg || f.cmsg.length < 4) return fieldError(root, 'cmsg', 'پیامتان را بنویسید');
+        fieldError(root, 'cmsg', '');
+        if (f.cphone && !validPhone(f.cphone)) return fieldError(root, 'cphone', 'شماره معتبر نیست');
+        fieldError(root, 'cphone', '');
+        const lines = [
+          f.cname ? `از طرف ${f.cname}` : '',
+          f.cphone ? `شماره: ${f.cphone}` : '',
+          f.corder ? `درباره‌ی سفارش: ${f.corder}` : '',
+          '', f.cmsg,
+        ].filter((x) => x !== null);
+        window.open(
+          `https://wa.me/${BRAND.whatsapp}?text=${encodeURIComponent(lines.join('\n'))}`,
+          '_blank', 'noopener');
+        toast('پیام آماده شد — در واتساپ بفرستید', 'wa');
+      });
+    },
   };
 }
 
@@ -155,7 +206,7 @@ export function faq() {
 export function notFound() {
   return `
   <div class="wrap empty page-top">
-    <div class="lat" style="font-size:72px;font-weight:300;color:var(--faint)">404</div>
+    <div class="lat" style="font-size:72px;font-weight:300;color:var(--muted)">404</div>
     <h3>این صفحه پیدا نشد</h3>
     <p class="t-fine" style="max-width:32ch;margin-inline:auto">
       شاید آدرس عوض شده باشد. از فروشگاه شروع کنید.</p>
