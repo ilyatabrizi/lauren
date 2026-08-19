@@ -46,6 +46,64 @@ boundary below 3:1.
 | **Search** | Its own route, matches Persian name / colour / fabric / piece number, tolerant of ی-ي and ک-ك |
 | **Orders** | Order detail + receipt, derived delivery stages, reorder, cancel, exchange request |
 | **Pickup** | Collect at Atlas as a real checkout option — skips the address it doesn't need |
+| **Reviews** | Written only by someone whose order was delivered, keyed to the garment, honest empty state |
+| **Identity** | A footer band naming who the shop is, with slots that stay empty until the certificates are real |
+
+### What the site does not claim
+
+A preview that cannot send an SMS should not say it will. Every promise the
+static build cannot keep was removed, and where the honest answer was a *place*
+rather than a message, the place was built:
+
+- A sold-out size no longer says «خبرتان می‌کنیم». It records the request and
+  opens a pre-written WhatsApp message, and `#/wishlist` now lists everything
+  you are waiting on — because a request nobody can answer is not a feature.
+- The order stages are derived from elapsed time, so every screen that shows
+  them says so.
+- The sign-in code is generated and printed on screen, and says that too.
+- `#/thanks` celebrates only the payment that just happened. `pay.js` stamps
+  the order id in `sessionStorage`; every other arrival — a bookmark, a shared
+  link, a week later — redirects to `#/order/:id`, which is already the
+  receipt. A confirmation that congratulates you on a week-old order is a lie
+  about when you are.
+
+### هویت فروشگاه — the trust band
+
+Iranian shoppers look for نماد اعتماد الکترونیکی and نشان ساماندهی. Lauren has
+neither yet: both are issued against a **verified domain the business owns**,
+and this preview sits on a path under `github.io`, which neither authority will
+certify.
+
+So the footer draws a **labelled empty slot** — «جای نماد اعتماد الکترونیکی» —
+dashed, greyscale, shaped nothing like a seal, above a line saying plainly that
+no badge or registration number has been invented. `TRUST` in `js/config.js`
+starts every field `null`; a certificate renders **only** when its `code` is a
+real string, and that rule lives in `certSlot()` in `js/app.js`, not merely in
+this document. Filling it in later is a data edit: paste the licence number,
+the e-Namad id and its verification URL, drop the issued image in
+`assets/trust/`, and the slot becomes a badge with no markup change.
+
+The one thing we could publish today is the landline — which, it turns out,
+never dialled: `BRAND.phone` is written in Persian numerals and `\D` is
+`[^0-9]`, so `replace(/\D/g, '')` deleted every digit and shipped `href="tel:"`.
+`latinDigits()` in `js/util.js` fixes it.
+
+### نظر خریداران — reviews
+
+- **Only a real buyer writes one.** Three gates: signed in, owns a
+  non-cancelled order whose derived stage is `done`, and that order contained
+  this garment. The gate reuses the one lifecycle definition in `store.js`, so
+  a real courier feed makes it correct for free.
+- **Keyed to `family`, not to the product id.** Fit, fabric weight and how the
+  size ran are properties of the garment, not the colourway — and keying on the
+  id would scatter 12 buckets across 6 garments and let one person review the
+  same piece twice by buying two colours. Each review still records the colour
+  and size actually bought.
+- **The empty state is the default,** because it is the truth on a fresh install.
+- **The sample reviews are fiction and say so.** They carry a «نمونه» tag, never
+  the «خرید تاییدشده» pill, are excluded from every average and count, are never
+  written to `localStorage`, and disappear entirely when `PREVIEW.enabled` is
+  false. A fabricated opinion can never move a number a shopper reads as fact.
 
 ### باشگاه لارن — the wallet
 
@@ -84,12 +142,14 @@ Then open <http://localhost:8071>. Set `PORT` to use a different port.
 python3 scripts/e2e.py http://localhost:8071
 ```
 
-59 checks: every route renders, the whole browse → bag → checkout → pay →
+154 checks: every route renders, the whole browse → bag → checkout → pay →
 confirm flow, totals arithmetic, the wallet rules (earn base, redemption cap,
 welcome credit minted once per phone), PWA manifest and service worker, RTL,
-and that no Persian text carries letter-spacing. Needs
-`pip3 install playwright` (falls back to the system Chrome, so
-`playwright install` is optional).
+that no Persian text carries letter-spacing, that no screen promises an SMS,
+that a revisited confirmation becomes a receipt, that an unissued certificate
+draws a labelled empty slot and never a seal, and that a review cannot be
+written without a delivered order. Needs `pip3 install playwright` (falls back
+to the system Chrome, so `playwright install` is optional).
 
 ---
 
@@ -207,8 +267,9 @@ Ordered by what blocks a launch:
 5. **Analytics + SEO** — hash routes are invisible to search engines. If
    organic search matters, move to real paths with server rewrites.
 
-Until then this is a design and UX preview, and the copy says so where a
-customer could be misled.
+Until then this is a design and UX preview. Every screen that could mislead a
+customer now says what it actually is, and `scripts/e2e.py` fails the build if
+an SMS promise, a fabricated trust seal, or an ungated review ever comes back.
 
 ---
 

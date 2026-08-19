@@ -5,7 +5,7 @@ import { BRAND, SHOP, PREVIEW } from '../config.js';
 import { PRODUCTS, SIZE_CHARTS, SIZE_NOTE } from '../data.js';
 import {
   state, orderStage, canCancel, cancelOrder, exchangeWindow,
-  requestExchange, reorder,
+  requestExchange, reorder, myReview, forgetNotify,
 } from '../store.js';
 import {
   ICON, productCard, bindCards, reveal, settleImages, field, fieldError, toast, sizeTables,
@@ -18,6 +18,15 @@ import { go, refresh } from '../router.js';
 // where people keep the thing they are deciding about — not a settings tab.
 export function wishlist() {
   const items = state.wish.map((id) => PRODUCTS.find((p) => p.id === id)).filter(Boolean);
+
+  // «بزنید تا خبرتان کنیم» used to end in localStorage and nowhere else. These
+  // are those requests, made visible, each with the only channel that can
+  // actually answer them.
+  const waits = (state.notify || []).map((k) => {
+    const [id, size] = k.split('|');
+    const p = PRODUCTS.find((x) => x.id === id);
+    return p ? { p, size } : null;
+  }).filter(Boolean);
 
   const html = `
   <div class="wrap page-top">
@@ -48,9 +57,41 @@ export function wishlist() {
         </p>
         <a class="btn btn--sm" href="#/shop" style="margin-block-start:var(--s5)">دیدن کالکشن</a>
       </div>`}
+
+    ${waits.length ? `
+    <div class="panel" style="margin-block-start:var(--s7)">
+      <h3>منتظر موجود شدن</h3>
+      <p class="t-small" style="margin-block-end:var(--s4)">
+        این‌ها را روی همین دستگاه یادداشت کرده‌اید. برای پیگیری، پیام واتساپ
+        هر کدام آماده است.
+      </p>
+      <div class="trust">
+        ${waits.map(({ p, size }) => `
+          <div>${ICON.clock}<span>
+            <a class="link" href="#/p/${p.id}">${esc(p.title)}</a> —
+            ${esc(p.colorName)} · سایز <bdi class="lat">${esc(size)}</bdi>
+            <a class="link" style="margin-inline-start:var(--s2)" target="_blank" rel="noopener"
+               href="https://wa.me/${BRAND.whatsapp}?text=${encodeURIComponent(
+                 `سلام، سایز ${size} از «${p.title}» (لارن ${p.ref} — ${p.colorName}) را می‌خواهم؛ وقتی موجود شد خبرم کنید.`)}"
+              >پرسیدن در واتساپ</a>
+            <button class="link" style="margin-inline-start:var(--s2)"
+                    data-unnotify="${p.id}|${size}">حذف</button>
+          </span></div>`).join('')}
+      </div>
+    </div>` : ''}
   </div>`;
 
-  return { html, mount(root) { bindCards(root); reveal(root); settleImages(root); } };
+  return {
+    html,
+    mount(root) {
+      bindCards(root); reveal(root); settleImages(root);
+      $$('[data-unnotify]', root).forEach((b) => b.addEventListener('click', () => {
+        forgetNotify(b.dataset.unnotify);
+        toast('از فهرست انتظار حذف شد', 'info');
+        refresh();
+      }));
+    },
+  };
 }
 
 /* --------------------------------------------------------------- track --- */
@@ -77,8 +118,8 @@ export function track(ctx) {
       </div>
       <button class="btn btn--sm" data-look style="margin-block-start:var(--s3)">پیگیری</button>
       <p class="t-fine" style="margin-block-start:var(--s4)">
-        شماره سفارش در پیامک تایید و در صفحه‌ی
-        <a class="link" href="#/account?tab=orders" style="font-size:12px">سفارش‌های من</a> هست.
+        شماره سفارش را در همان رسید سفارش و در صفحه‌ی
+        <a class="link" href="#/account?tab=orders" style="font-size:12px">سفارش‌های من</a> می‌بینید.
       </p>
     </div>
 
@@ -86,6 +127,7 @@ export function track(ctx) {
       <div class="panel" style="margin-block-start:var(--s3)">
         <h3>سفارشی با این شماره پیدا نشد</h3>
         <p class="t-small">
+          این پیگیری فقط سفارش‌هایی را پیدا می‌کند که روی همین دستگاه ثبت شده‌اند.
           شماره را یک بار دیگر ببینید، یا در واتساپ بفرستید تا دستی برایتان چک کنیم.
         </p>
         <a class="btn btn--ghost btn--sm" target="_blank" rel="noopener"
@@ -275,6 +317,11 @@ export function shipping() {
         <a class="btn btn--ghost btn--sm" href="#/faq">سوال‌های پرتکرار</a>
       </div>
     </div>
+
+    ${PREVIEW.enabled ? `
+    <p class="t-fine" style="margin-block-start:var(--s5)">
+      ${esc(PREVIEW.note)} شرایط بالا سیاست فروشگاه است و در این نسخه اجرا نمی‌شود.
+    </p>` : ''}
   </div>`;
   return { html, mount(root) { reveal(root); } };
 }
@@ -338,7 +385,10 @@ export function orderDetail(ctx) {
               <div><b>${esc(st.label)}</b>
                 ${st.note ? `<span class="t-fine">${esc(st.note)}</span>` : ''}</div>
             </li>`).join('')}
-        </ol>`}
+        </ol>
+        ${PREVIEW.enabled ? `<p class="t-fine" style="margin-block-start:var(--s4)">
+          ${esc(PREVIEW.note)} مراحل بالا در این پیش‌نمایش از زمان ثبت سفارش حساب می‌شود.
+        </p>` : ''}`}
     </div>
 
     <div class="panel" style="margin-block-start:var(--s3)">
@@ -390,7 +440,38 @@ export function orderDetail(ctx) {
           <bdi class="lat">${esc(o.exchange.fromSize)}</bdi> به
           <bdi class="lat">${esc(o.exchange.toSize)}</bdi> · ${esc(o.exchange.reason)}</span></div>
         <div>${ICON.clock}<span>ثبت‌شده در ${esc(faDate(o.exchange.requestedAt))} —
-          در حال بررسی. برای هماهنگی پیک با شما تماس می‌گیریم.</span></div>
+          متن درخواست برای واتساپ فروشگاه آماده شد؛ هماهنگی پیک در همان گفت‌وگو
+          انجام می‌شود.</span></div>
+      </div>
+      <button class="btn btn--ghost btn--sm" data-waex style="margin-block-start:var(--s4)">
+        باز کردن دوباره‌ی پیام در واتساپ
+      </button>
+    </div>` : ''}
+
+    ${!o.cancelledAt && win.delivered ? `
+    <div class="panel" style="margin-block-start:var(--s3)">
+      <h3>نظرتان را بنویسید</h3>
+      <p class="t-small" style="margin-block-end:var(--s4)">
+        این سفارش تحویل شده. اگر دوست داشتید، برای هر کدام یک نظر بگذارید.
+      </p>
+      <div class="minilines" style="max-height:none">
+        ${o.items.map((i) => {
+          const prod = PRODUCTS.find((x) => x.id === i.id);
+          const done = prod && myReview(prod.family);
+          return `
+          <div class="miniline">
+            <a class="miniline__img" href="#/p/${i.id}">
+              <img src="assets/products/${i.img}.jpg" alt="${esc(i.title)}" loading="lazy">
+            </a>
+            <div>
+              <a href="#/p/${i.id}">${esc(i.title)}</a>
+              <span>${esc(i.color)} · سایز <bdi class="lat">${esc(i.size)}</bdi></span>
+            </div>
+            ${!prod ? '<span class="t-fine">دیگر در کالکشن نیست</span>'
+              : done ? '<span class="order__st ok">نظر شما ثبت شد</span>'
+              : `<a class="btn btn--ghost btn--sm" data-review href="#/p/${i.id}?to=reviews">نوشتن نظر</a>`}
+          </div>`;
+        }).join('')}
       </div>
     </div>` : ''}
 
@@ -432,6 +513,15 @@ export function orderDetail(ctx) {
         if (!cancelOrder(o.id)) return toast('این سفارش دیگر قابل لغو نیست', 'info');
         toast('سفارش لغو شد و اعتبار برگشت', 'check');
         refresh();
+      });
+      // A blocked popup at request time would otherwise strand the exchange in
+      // localStorage with no way to resend it — this rebuilds the same message.
+      $('[data-waex]', root)?.addEventListener('click', () => {
+        const x = o.exchange;
+        const msg = `سلام، درخواست تعویض سایز برای سفارش ${o.id}:\n`
+          + `${x.title} (لارن ${x.ref || '—'})\n`
+          + `از سایز ${x.fromSize} به ${x.toSize}\nدلیل: ${x.reason}`;
+        window.open(`https://wa.me/${BRAND.whatsapp}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener');
       });
     },
   };
@@ -509,8 +599,8 @@ export function exchange(ctx) {
         ثبت درخواست تعویض
       </button>
       <p class="t-fine" style="margin-block-start:var(--s3)">
-        پس از ثبت، پیامی آماده برای واتساپ فروشگاه باز می‌شود تا درخواست
-        همان لحظه به دستشان برسد.
+        پس از ثبت، واتساپ با متن آماده باز می‌شود؛ کافی است دکمه‌ی ارسال را بزنید
+        تا درخواست به فروشگاه برسد.
       </p>
     </form>
   </div>`;

@@ -74,7 +74,7 @@ export const SHOP = {
   stages: [
     { key: 'paid',    label: 'پرداخت شد',              note: 'سفارش ثبت و پرداخت شد',      afterHours: 0 },
     { key: 'packing', label: 'آماده‌سازی در فروشگاه',   note: 'بسته‌بندی و کنترل نهایی',     afterHours: 1 },
-    { key: 'sent',    label: 'تحویل به پست',            note: 'کد رهگیری پیامک می‌شود',      afterHours: 6 },
+    { key: 'sent',    label: 'تحویل به پست',            note: 'بسته تحویل شرکت پست شد',      afterHours: 6 },
     { key: 'done',    label: 'تحویل به شما',            note: '',                            afterHours: 48 },
   ],
   // the pickup flow has its own wording — nothing is posted
@@ -106,3 +106,49 @@ export const PREVIEW = {
   // number here would dead-end anyone clicking through the demo.
   testCard: '6037 9975 1234 5670',
 };
+
+/* ------------------------------------------------------------------ trust --
+ * Who the shop legally is, as distinct from how to reach it (that is footer
+ * column 4). Every field starts null and STAYS null until Lauren hands us the
+ * document it comes from. A null field renders no row at all — never a dash,
+ * never a placeholder number — because a blank beside a label reads as a
+ * hidden fact, and an invented one is a lie about a real business.
+ *
+ * نماد اعتماد الکترونیکی and نشان ساماندهی are issued by enamad.ir and
+ * samandehi.ir against a VERIFIED DOMAIN the business owns. This preview sits
+ * on a path under a github.io host, which neither authority will certify, so
+ * `code` is null for both and the footer draws a labelled empty slot instead
+ * of a seal. Filling these in later is a DATA edit, not a code edit: paste the
+ * id into `code`, the profile URL into `href`, drop the issued image at
+ * assets/trust/<id>.png and name it in `img`.
+ *
+ * NOTE: this module must never import from util.js — util.js already imports
+ * SHOP from here, and closing that cycle puts the imported binding in TDZ when
+ * config.js evaluates first, which kills the app at load. So `landline` holds
+ * the DISPLAY string and the dialable form is derived at the call site.
+ */
+export const TRUST = {
+  legalName:   null,   // نام ثبتی روی جواز — «لارن» is the shop sign, not proof
+  ownerName:   null,   // نام مالک، همان‌طور که در پروانه‌ی کسب آمده
+  licence:     null,   // شماره پروانه کسب — issued to the SHOP, needs no domain
+  licenceBody: null,   // اتحادیه‌ی صادرکننده
+  nationalId:  null,   // شناسه ملی / کد اقتصادی
+  postcode:    null,   // کد پستی ۱۰ رقمی — e-Namad verifies the address by it
+  email:       null,   // ایمیل رسمی — required by e-Namad; the site has none yet
+
+  landline: BRAND.phone,
+
+  certs: [
+    { id: 'enamad',    name: 'نماد اعتماد الکترونیکی', authority: 'enamad.ir',
+      code: null, href: null, img: null },
+    { id: 'samandehi', name: 'نشان ساماندهی',          authority: 'samandehi.ir',
+      code: null, href: null, img: null },
+  ],
+
+  // Deliberately not «در حال دریافت» or «به‌زودی»: neither is true, because no
+  // application can even be filed until a dedicated domain exists.
+  pendingNote: 'نماد اعتماد الکترونیکی و نشان ساماندهی پس از ثبت دامنه‌ی اختصاصی '
+    + 'و تایید مرجع صادرکننده، در همین جایگاه قرار می‌گیرند. در این پیش‌نمایش '
+    + 'هیچ نماد یا شماره‌ی ثبتی نمایشی ساخته نشده است.',
+};
+

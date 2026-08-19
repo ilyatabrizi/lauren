@@ -38,7 +38,7 @@ function signInView() {
               placeholder: '09xxxxxxxxx', inputmode: 'numeric', maxlength: 11,
               dir: 'ltr', autocomplete: 'tel',
             })}
-            <button class="btn btn--block btn--lg" type="submit">دریافت کد تایید</button>
+            <button class="btn btn--block btn--lg" type="submit">نمایش کد آزمایشی</button>
           </form>
 
           <form data-step2 hidden novalidate>
@@ -51,14 +51,14 @@ function signInView() {
             <p class="t-fine" data-otperr style="min-height:18px;color:var(--thread-d);margin-block-start:var(--s2)"></p>
             <button class="btn btn--block btn--lg" type="submit">ورود</button>
             <div style="display:flex;justify-content:space-between;margin-block-start:var(--s3)">
-              <button class="link" type="button" data-resend disabled>ارسال دوباره‌ی کد</button>
+              <button class="link" type="button" data-resend disabled>کد تازه</button>
               <button class="link" type="button" data-back>تغییر شماره</button>
             </div>
           </form>
         </div>
 
         <p class="t-fine" style="text-align:center;margin-block-start:var(--s4)">
-          ${esc(PREVIEW.note)} کد تایید روی همین صفحه نشان داده می‌شود.
+          ${PREVIEW.enabled ? `${esc(PREVIEW.note)} کد تایید روی همین صفحه نشان داده می‌شود.` : ''}
         </p>
       </div>
     </div>`,
@@ -71,9 +71,12 @@ function signInView() {
       const send = () => {
         code = String(Math.floor(1000 + Math.random() * 8999));
         const phone = $('[name="phone"]', root).value.trim();
+        // The code is generated here and printed here — nothing is sent. Say so
+        // in the same breath, the way the gateway already does (pay.js).
         $('[data-sent]', root).innerHTML =
-          `کد تایید برای <span class="lat">${esc(phone)}</span> فرستاده شد — ` +
-          `<b class="num" style="color:var(--thread)">${code}</b>`;
+          `کد آزمایشی برای <span class="lat">${esc(phone)}</span>: ` +
+          `<b class="num" style="color:var(--thread-d)">${code}</b>` +
+          ' — در نسخه‌ی واقعی این کد پیامک می‌شود.';
         boxes.forEach((b) => { b.value = ''; b.classList.remove('bad'); });
         boxes[0].focus();
         let left = 60;
@@ -81,10 +84,10 @@ function signInView() {
         clearInterval(timer);
         timer = setInterval(() => {
           left--;
-          resend.textContent = left > 0 ? `ارسال دوباره تا ${left} ثانیه` : 'ارسال دوباره‌ی کد';
+          resend.textContent = left > 0 ? `کد تازه تا ${left} ثانیه` : 'کد تازه';
           if (left <= 0) { resend.disabled = false; clearInterval(timer); }
         }, 1000);
-        resend.textContent = `ارسال دوباره تا ${left} ثانیه`;
+        resend.textContent = `کد تازه تا ${left} ثانیه`;
       };
 
       s1.addEventListener('submit', (e) => {
@@ -239,7 +242,10 @@ function ordersPanel() {
         <span class="order__more">جزئیات و فاکتور ${ICON.back}</span>
       </div>
     </a>`;
-  }).join('');
+  }).join('') + (PREVIEW.enabled ? `
+    <p class="t-fine" style="margin-block-start:var(--s4)">
+      وضعیت‌ها در این پیش‌نمایش از زمان ثبت سفارش حساب می‌شود، نه از سامانه‌ی پست.
+    </p>` : '');
 }
 
 /* ------------------------------------------------------------ wishlist --- */
@@ -289,8 +295,8 @@ function profilePanel() {
   <div class="panel">
     <h3>پشتیبانی</h3>
     <div class="trust">
-      <div>${ICON.wa}<span>واتساپ — <a class="lat" style="color:var(--thread)" href="https://wa.me/${BRAND.whatsapp}" target="_blank" rel="noopener">+${BRAND.whatsapp}</a></span></div>
-      <div>${ICON.insta}<span>اینستاگرام — <a class="lat" style="color:var(--thread)" href="https://instagram.com/${BRAND.instagram}" target="_blank" rel="noopener">@${BRAND.instagram}</a></span></div>
+      <div>${ICON.wa}<span>واتساپ — <a class="lat" style="color:var(--thread-d)" href="https://wa.me/${BRAND.whatsapp}" target="_blank" rel="noopener">+${BRAND.whatsapp}</a></span></div>
+      <div>${ICON.insta}<span>اینستاگرام — <a class="lat" style="color:var(--thread-d)" href="https://instagram.com/${BRAND.instagram}" target="_blank" rel="noopener">@${BRAND.instagram}</a></span></div>
       <div>${ICON.pin}<span>${esc(BRAND.address)}</span></div>
     </div>
   </div>`;

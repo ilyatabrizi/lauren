@@ -1025,6 +1025,48 @@ body.tabs-away .tabbar {
 .socials a:hover { border-color: var(--ink); color: var(--ink); }
 .socials svg { width: 17px; height: 17px; stroke-width: 1.5; }
 
+/* trust band — identity, sitting above the copyright line. Deliberately quiet:
+   this is proof, not decoration. No accent fill, no badge frame, no colour, so
+   an empty slot can never be mistaken for an issued seal. Adds zero block-end
+   padding at either breakpoint — .ft__bot keeps sole ownership of the tab-bar
+   clearance. */
+.ft__trust {
+  display: grid; gap: var(--s5);
+  margin-block-start: var(--s7);
+  padding-block-start: var(--s5);
+  border-block-start: 1px solid var(--rule);
+}
+/* the same hinge as .ft__grid, so the footer reshapes once on the way down to
+   a phone, not twice */
+@media (min-width: 780px) {
+  .ft__trust { grid-template-columns: 1fr auto; align-items: start; gap: var(--s7); }
+}
+.ft__idlist { display: grid; gap: var(--s3); font-size: 13px; color: var(--muted); }
+.ft__idlist li { display: flex; gap: var(--s3); align-items: flex-start; }
+.ft__idlist a { color: var(--ink); }
+.ft__idlist a:hover { color: var(--thread-d); }
+.ft__idic { width: 16px; flex: none; color: var(--thread-d); margin-block-start: 2px; }
+.ft__idic svg { width: 16px; height: 16px; stroke-width: 1.4; }
+
+.ft__seals { display: flex; flex-wrap: wrap; gap: var(--s3); align-items: flex-start; }
+.ft__seal { width: 86px; height: 86px; display: grid; place-items: center; background: var(--vitrine); }
+.ft__seal img { width: 100%; height: 100%; object-fit: contain; }
+/* dashed, unfilled, greyscale: the frame IS the message. --edge (3.7:1), not
+   --rule (1.8:1), because this boundary carries meaning. */
+.ft__seal--empty {
+  gap: var(--s1); padding: var(--s2); text-align: center;
+  background: var(--paper-2); border: 1px dashed var(--muted); color: var(--muted);
+  font-size: 10.5px; line-height: 1.55;
+}
+/* --muted, not --edge: on --paper-2 the interactive token only reaches 2.97:1,
+   and the .8 opacity that used to sit here took the authority line to 3.4:1. */
+.ft__seal--empty small { font-size: 9.5px; color: var(--muted); }
+.ft__sealnote { margin-block-start: var(--s3); max-width: 38ch; font-size: 11px; line-height: 1.75; color: var(--muted); }
+@media (min-width: 780px) {
+  .ft__seals { justify-content: flex-end; }
+  .ft__sealnote { text-align: end; }
+}
+
 /* install prompt — fully off-screen until asked for */
 .a2hs {
   position: fixed; inset-inline: var(--s3);
@@ -1038,6 +1080,54 @@ body.tabs-away .tabbar {
 .a2hs img { width: 40px; height: 40px; flex: none; }
 .a2hs b { font-size: 13.5px; font-weight: 500; display: block; }
 .a2hs p { font-size: 11.5px; color: var(--muted); line-height: 1.6; }
+
+/* ------------------------------------------------------------- reviews -- */
+/* Stars are ink, not accent. The PDP already spends its ~3 accent uses on
+   .pdp__ref and the .trust icons, and a wall of orange stars would read as
+   decoration on a page whose job is to show cloth. */
+.stars { display: inline-flex; gap: 3px; align-items: center; vertical-align: middle; }
+.stars span { width: 15px; height: 15px; display: block; color: var(--rule); }
+.stars span svg { width: 15px; height: 15px; stroke-width: 1.4; }
+.stars .is-on { color: var(--ink); }
+.stars .is-on svg { fill: var(--ink); }
+
+.card__rate { display: flex; gap: var(--s2); align-items: center; font-size: 12px; color: var(--muted); }
+.card__rate .stars span { width: 12px; height: 12px; }
+.card__rate .stars span svg { width: 12px; height: 12px; }
+
+.rev { display: grid; gap: var(--s2); padding-block: var(--s4); border-block-end: 1px solid var(--rule); }
+.rev:last-child { border-block-end: 0; }
+.rev__hd { display: flex; gap: var(--s3); align-items: center; flex-wrap: wrap; }
+.rev__who { font-size: 13.5px; }
+.rev__when { font-size: 11.5px; color: var(--muted); margin-inline-start: auto; }
+.rev__buy { font-size: 11.5px; color: var(--muted); }
+.rev__body { font-size: 13.5px; line-height: 1.85; }
+.rev--sample .rev__body { color: var(--muted); }
+
+/* Distribution bars are ordinary block children inside a dir=rtl container, so
+   they start at the right edge on their own — no offsetLeft anywhere near this,
+   and the RTL trap that bites the tab pill does not apply. */
+.rev__dist { display: grid; gap: var(--s2); margin-block-start: var(--s4); }
+.rev__row {
+  display: grid; grid-template-columns: auto 1fr auto; gap: var(--s3);
+  align-items: center; font-size: 12px; color: var(--muted);
+}
+.rev__track { height: 2px; background: var(--paper-2); overflow: hidden; }
+/* display:block is load-bearing — width and height do not apply to an inline
+   box, so without it every bar measures 0×0 and the histogram draws nothing. */
+.rev__fill { display: block; height: 100%; background: var(--ink); transition: width .8s var(--ease-o); }
+
+/* the star picker in the write form — .sizes/.size without the strike states */
+.rating { display: flex; gap: var(--s2); }
+.rating button {
+  width: 40px; height: 40px; display: grid; place-items: center;
+  border: 1px solid var(--edge); background: transparent; color: var(--rule);
+  transition: all .18s var(--ease); cursor: pointer;
+}
+.rating button svg { width: 20px; height: 20px; stroke-width: 1.4; }
+.rating button[aria-pressed="true"] { color: var(--ink); border-color: var(--ink); }
+.rating button[aria-pressed="true"] svg { fill: var(--ink); }
+.rating button:hover { border-color: var(--ink); }
 
 /* reveal */
 .rv { opacity: 0; transform: translateY(16px); }

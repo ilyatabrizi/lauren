@@ -369,5 +369,43 @@ export const FAQ = [
   },
 ];
 
+
+/* --------------------------------------------------------- sample reviews --
+ * FICTIONAL, and labelled as such everywhere they appear. They exist so the
+ * client can see a populated review block in the preview; they are NOT from
+ * Lauren's customers.
+ *
+ * Three rules hold the honesty, and all three are enforced in code, not here:
+ *   1. every row renders a «نمونه» tag and never the «خرید تاییدشده» pill,
+ *   2. they are excluded from reviewSummary(), so no average, count or bar
+ *      a shopper reads as fact is ever moved by an invented opinion,
+ *   3. shownReviews() drops them entirely when PREVIEW.enabled is false, so
+ *      they cannot survive into a real shop by accident.
+ * They are never written to state.reviews and so never reach localStorage.
+ *
+ * Timestamps are relative to load rather than fixed dates, so the preview does
+ * not visibly rot between demos.
+ */
+const AGO = (days) => Date.now() - days * 86400000;
+
+export const SAMPLE_REVIEWS = [
+  { family: 'pique-stripe', name: 'امیر', stars: 5, ts: AGO(9), sample: true,
+    body: 'پارچه‌ی پیکه‌اش وزن‌دار است و بعد از سه بار شست‌وشو هنوز فرمش را دارد. یقه‌اش شل نشد.' },
+  { family: 'pique-stripe', name: 'سعید', stars: 4, ts: AGO(21), sample: true,
+    body: 'سایز L برای قد ۱۸۰ و وزن ۷۸ اندازه بود. اگر فرم آزادتر می‌خواهید یک سایز بالاتر بگیرید.' },
+  { family: 'jacquard-knit', name: 'محمد', stars: 5, ts: AGO(6), sample: true,
+    body: 'بافتِ ژاکاردش از نزدیک خیلی بهتر از عکس است. زیر کت هم خوب می‌نشیند.' },
+  { family: 'contrast-collar', name: 'رضا', stars: 4, ts: AGO(15), sample: true,
+    body: 'دوختش تمیز است. یقه‌ی کنتراست دقیقاً همان رنگی است که در تصویر دیده می‌شود.' },
+  { family: 'rib-knit', name: 'کامران', stars: 5, ts: AGO(11), sample: true,
+    body: 'سبک است ولی گرم. برای پاییز تبریز دقیقاً همان چیزی بود که می‌خواستم.' },
+  { family: 'rib-knit', name: 'بهزاد', stars: 4, ts: AGO(28), sample: true,
+    body: 'رنگ شیری‌اش خیلی تمیز است؛ فقط مثل هر بافت روشنی، حواستان به لکه باشد.' },
+  { family: 'jacquard-suit', name: 'آرش', stars: 5, ts: AGO(4), sample: true,
+    body: 'ست را برای مراسم گرفتم. قد شلوار را کوتاه کردم و بقیه‌اش اندازه بود.' },
+  { family: 'ringer-set', name: 'یاسر', stars: 4, ts: AGO(17), sample: true,
+    body: 'راحت است و ست‌بودنش توی خیابان هم جواب می‌دهد. کش دور کمرش محکم است.' },
+];
+
 export const byId = (id) => PRODUCTS.find((p) => p.id === id);
 export const family = (p) => PRODUCTS.filter((x) => x.family === p.family);

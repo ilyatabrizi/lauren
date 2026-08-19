@@ -163,6 +163,12 @@ export default function pay() {
             gateway: bank.label, t, ref,
           });
           sessionStorage.removeItem('lauren.pending');
+          // Stamp WHICH order was just confirmed, not merely that one was.
+          // #/thanks celebrates only this id; every other arrival there — a
+          // link, a history entry, someone else's order number — is a receipt.
+          // sessionStorage, not a module flag, so the reload a nervous shopper
+          // performs three seconds later still reads as a confirmation.
+          try { sessionStorage.setItem('lauren.confirmed', order.id); } catch { /* private mode */ }
           go(`/thanks?id=${order.id}`, { replace: true });
         }, 1300);
       });

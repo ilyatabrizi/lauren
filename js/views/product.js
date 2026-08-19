@@ -1,16 +1,45 @@
 // LAUREN — product detail.
 
 import { byId, family, PRODUCTS, chartsFor, SIZE_NOTE } from '../data.js';
-import { SHOP, BRAND } from '../config.js';
+import { SHOP, BRAND, PREVIEW } from '../config.js';
 const SHOP_WA = BRAND.whatsapp;
 import {
   photo, productCard, bindCards, bindAccordions, accordion,
-  reveal, toast, ICON, lightbox, settleImages, sizeTables,
+  reveal, toast, ICON, lightbox, settleImages, sizeTables, field, stars,
 } from '../ui.js';
-import { toman, tomanRound, esc, $, $$ } from '../util.js';
-import { addToBag, inWish, toggleWish, markViewed, tier, notifyMe, isNotifying } from '../store.js';
+import { toman, tomanRound, esc, faDate, $, $$ } from '../util.js';
+import {
+  addToBag, inWish, toggleWish, markViewed, tier, notifyMe, isNotifying,
+  state, reviewsFor, myReview, canReview, saveReview, removeReview,
+  reviewSummary, shownReviews,
+} from '../store.js';
 import { openBag } from '../bag.js';
-import { go } from '../router.js';
+import { go, refresh } from '../router.js';
+
+// Persian decimal separator is ٫ (U+066B). The digits themselves are left
+// alone — IRANYekanXFaNum substitutes ۰–۹ in the font, so converting here
+// would double-convert.
+const faAvg = (n) => n.toFixed(1).replace('.', '٫');
+
+/** One review row. `own` adds the edit affordance; a sample never gets the
+ *  verified-purchase pill, only the «نمونه» tag. */
+function revRow(r, own) {
+  return `
+  <article class="rev ${r.sample ? 'rev--sample' : ''}">
+    <div class="rev__hd">
+      ${stars(r.stars)}
+      <span class="rev__who">${esc(r.name)}</span>
+      ${r.sample
+        ? '<span class="tag tag--quiet">نمونه</span>'
+        : '<span class="order__st ok">خرید تاییدشده</span>'}
+      ${own ? '<span class="tag tag--quiet">نظر شما</span>' : ''}
+      <span class="rev__when">${esc(faDate(r.ts))}</span>
+    </div>
+    ${!r.sample && r.color ? `<div class="rev__buy">خریداری‌شده: ${esc(r.color)} — سایز
+      <bdi class="lat">${esc(r.size)}</bdi></div>` : ''}
+    ${r.body ? `<p class="rev__body">${esc(r.body)}</p>` : ''}
+  </article>`;
+}
 
 export default function product(ctx) {
   const p = byId(ctx.params.id);
@@ -24,6 +53,14 @@ export default function product(ctx) {
   const related = PRODUCTS.filter((x) => x.cat === p.cat && x.family !== p.family).slice(0, 4);
   const rate = tier().rate;
   const earns = Math.round(p.price * rate);
+
+  // Reviews belong to the garment, not the colourway — see store.js.
+  const sum = reviewSummary(p.family);
+  const shown = shownReviews(p.family);
+  const real = shown.filter((r) => !r.sample);
+  const samples = shown.filter((r) => r.sample);
+  const gate = canReview(p.family);
+  const mine = myReview(p.family);
 
   const html = `
   <div class="wrap page-top">
@@ -53,6 +90,9 @@ export default function product(ctx) {
           ${p.compareAt ? `<s>${toman(p.compareAt)}</s>` : ''}
         </div>
         <p class="t-fine">قیمت با احتساب مالیات · ارسال در مرحله‌ی بعد محاسبه می‌شود</p>
+        ${sum.count ? `<button class="link" data-toreviews style="display:flex;gap:var(--s2);
+          align-items:center;margin-block-start:var(--s2)">${stars(Math.round(sum.avg))}
+          <span>${faAvg(sum.avg)} · ${sum.count} نظر</span></button>` : ''}
 
         ${sibs.length > 1 ? `
         <div class="opt">
@@ -83,7 +123,7 @@ export default function product(ctx) {
           </div>
           <p class="t-fine" style="margin-block-start:10px" data-sizehint>
             ${p.sizes.some((s) => (p.stock[s] ?? 0) === 0)
-              ? 'سایزهای خط‌خورده فعلاً ناموجودند — بزنید تا خبرتان کنیم.'
+              ? 'سایزهای خط‌خورده فعلاً ناموجودند — بزنید تا پیام آماده‌ی واتساپ باز شود.'
               : p.sizes.some((s) => (p.stock[s] ?? 0) <= 2)
                 ? 'سایزهای علامت‌دار موجودی محدودی دارند.'
                 : 'همه‌ی سایزها موجود است.'}
@@ -134,6 +174,88 @@ export default function product(ctx) {
     </div>
   </div>
 
+  <section class="sec wrap" id="reviews">
+    <div class="sec__head">
+      <div><span class="eyebrow">نظر خریداران</span>
+      <h2 class="t-h1" style="margin-block-start:12px">کسانی که این را خریده‌اند چه گفتند</h2></div>
+    </div>
+
+    <div class="panel">
+      ${sum.count ? `
+        <div style="display:flex;gap:var(--s5);align-items:center;flex-wrap:wrap">
+          <div>
+            <div style="font-size:30px;line-height:1.2">${faAvg(sum.avg)}</div>
+            ${stars(Math.round(sum.avg))}
+            <p class="t-fine" data-revcount style="margin-block-start:var(--s2)">از ${sum.count} نظر</p>
+          </div>
+          <div class="rev__dist" style="flex:1;min-width:200px">
+            ${[5, 4, 3, 2, 1].map((n) => `
+              <div class="rev__row">
+                <span>${n} ستاره</span>
+                <span class="rev__track"><span class="rev__fill" style="width:${
+                  sum.count ? Math.round(sum.dist[n - 1] / sum.count * 100) : 0}%"></span></span>
+                <span>${sum.dist[n - 1]}</span>
+              </div>`).join('')}
+          </div>
+        </div>` : `
+        <div class="empty" style="padding-block:var(--s5)">
+          ${ICON.star}
+          <h3>هنوز نظری ثبت نشده</h3>
+          <p class="t-small" style="max-width:38ch;margin-inline:auto">
+            نظرها فقط از خریدارانی گرفته می‌شود که سفارش‌شان تحویل شده. اولین نفر باشید.
+          </p>
+        </div>`}
+
+      ${real.length ? `<div style="margin-block-start:var(--s5)">
+        ${real.map((r) => revRow(r, r.phone === state.user?.phone)).join('')}
+      </div>` : ''}
+
+      ${gate ? `
+      <div class="rev__form" data-revform style="margin-block-start:var(--s6);
+           padding-block-start:var(--s5);border-block-start:1px solid var(--rule)">
+        <h3>${mine ? 'نظر خودتان را به‌روز کنید' : 'نظرتان را بنویسید'}</h3>
+        <p class="t-fine" style="margin-block:var(--s2) var(--s4)">
+          خرید شما تایید شده — ${esc(gate.item.color)} · سایز
+          <bdi class="lat">${esc(gate.item.size)}</bdi>، سفارش
+          <bdi class="lat">${esc(gate.order.id)}</bdi>
+        </p>
+        <span class="t-small" id="rlab" style="display:block;margin-block-end:var(--s2)">امتیاز شما</span>
+        <div class="rating" data-rating role="group" aria-labelledby="rlab">
+          ${[1, 2, 3, 4, 5].map((i) => `
+            <button type="button" data-star="${i}" aria-label="${i} ستاره"
+                    aria-pressed="${mine && mine.stars === i ? 'true' : 'false'}">${ICON.star}</button>`).join('')}
+        </div>
+        <div class="fields" style="margin-block-start:var(--s4)">
+          ${field('rbody', 'نظرتان درباره‌ی جنس، دوخت و سایز', {
+            type: 'textarea', wide: true, value: mine?.body || '',
+            placeholder: 'مثلاً: سایز L برای قد ۱۸۰ و وزن ۷۸ اندازه بود؛ پارچه‌اش وزن‌دار است.',
+          })}
+        </div>
+        <p class="t-fine" data-reverr style="min-height:18px;color:var(--thread-d)"></p>
+        <div style="display:flex;gap:var(--s2);flex-wrap:wrap">
+          <button class="btn btn--sm" data-revsave>${mine ? 'به‌روزرسانی نظر' : 'ثبت نظر'}</button>
+          ${mine ? '<button class="btn btn--ghost btn--sm" data-revdel>حذف نظر</button>' : ''}
+        </div>
+        <p class="t-fine" style="margin-block-start:var(--s3)">
+          نظر شما در این پیش‌نمایش روی همین دستگاه ذخیره می‌شود.
+        </p>
+      </div>` : ''}
+
+      ${samples.length ? `
+      <div style="margin-block-start:var(--s6);padding-block-start:var(--s5);
+                  border-block-start:1px solid var(--rule)">
+        <span class="eyebrow">نمونه‌ی نمایشی</span>
+        <div style="margin-block-start:var(--s3)">
+          ${samples.map((r) => revRow(r, false)).join('')}
+        </div>
+        <p class="t-fine" style="margin-block-start:var(--s4)">
+          ${esc(PREVIEW.note)} این نظرها نمونه‌ی طراحی‌اند و از مشتری واقعی نیستند؛
+          در میانگین امتیاز حساب نمی‌شوند.
+        </p>
+      </div>` : ''}
+    </div>
+  </section>
+
   ${related.length ? `
   <section class="sec wrap">
     <div class="sec__head">
@@ -162,15 +284,27 @@ export default function product(ctx) {
         size = inStock[0].dataset.size;
       }
 
+      const askForSize = (size) => {
+        const msg = `سلام، سایز ${size} از «${p.title}» (لارن ${p.ref} — ${p.colorName})`
+          + ' را می‌خواهم؛ وقتی موجود شد خبرم کنید.';
+        window.open(`https://wa.me/${SHOP_WA}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener');
+      };
+
       btns.forEach((b) => b.addEventListener('click', () => {
         // A sold-out size is still a real control — it takes a request to be
         // told when it comes back, which is the only useful thing left to do.
         if ('out' in b.dataset) {
-          const already = isNotifying(p.id, b.dataset.size);
-          if (already) return toast('قبلاً ثبت شده — خبرتان می‌کنیم', 'info');
-          notifyMe(p.id, b.dataset.size);
+          // Nothing in a static build can send the shopper a restock message,
+          // so the tap opens the one channel that can answer. The local note
+          // stays: it is what repaints .is-noted on a later visit.
+          const size = b.dataset.size;
+          const already = isNotifying(p.id, size);
+          if (!already) notifyMe(p.id, size);
           b.classList.add('is-noted');
-          toast(`سایز ${b.dataset.size} که رسید خبرتان می‌کنیم`, 'check');
+          askForSize(size);
+          toast(already
+            ? 'قبلاً یادداشت شده — پیام واتساپ دوباره باز شد'
+            : `سایز ${size} یادداشت شد — پیام واتساپ آماده است`, already ? 'info' : 'check');
           return;
         }
         btns.forEach((x) => x.setAttribute('aria-pressed', 'false'));
@@ -224,6 +358,47 @@ export default function product(ctx) {
         item.querySelector('.acc__btn').setAttribute('aria-expanded', 'true');
         item.scrollIntoView({ block: 'center', behavior: 'smooth' });
       });
+
+      /* ------------------------------------------------------------ reviews */
+      const toReviews = () => $('#reviews', root)?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      $('[data-toreviews]', root)?.addEventListener('click', toReviews);
+      // The order page links here with ?to=reviews. It must be a query param —
+      // the router splits on '?' only, so a second '#' lands inside params.id.
+      if (ctx.query.get('to') === 'reviews') setTimeout(toReviews, 120);
+
+      const form = $('[data-revform]', root);
+      if (form) {
+        let picked = mine?.stars || 0;
+        const err = $('[data-reverr]', form);
+        const starBtns = $$('[data-star]', form);
+        starBtns.forEach((b) => b.addEventListener('click', () => {
+          picked = Number(b.dataset.star);
+          starBtns.forEach((x) => x.setAttribute('aria-pressed',
+            String(Number(x.dataset.star) <= picked)));
+          err.textContent = '';
+        }));
+        // reflect an existing rating across the whole run, not just its own box
+        if (picked) starBtns.forEach((x) => x.setAttribute('aria-pressed',
+          String(Number(x.dataset.star) <= picked)));
+
+        $('[data-revsave]', form).addEventListener('click', () => {
+          if (!picked) { err.textContent = 'امتیاز را انتخاب کنید'; return; }
+          const body = $('[name="rbody"]', form).value;
+          if (!saveReview({ family: p.family, stars: picked, body })) {
+            toast('ثبت نظر ممکن نشد', 'info');
+            return;
+          }
+          toast('نظر شما ثبت شد', 'check');
+          go(`/p/${p.id}?to=reviews`);
+        });
+
+        $('[data-revdel]', form)?.addEventListener('click', () => {
+          // mirror the save path: a control that silently does nothing reads as broken
+          if (!mine || !removeReview(mine.id)) return toast('حذف نظر ممکن نشد', 'info');
+          toast('نظر شما حذف شد', 'info');
+          go(`/p/${p.id}?to=reviews`);
+        });
+      }
     },
   };
 }

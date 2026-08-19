@@ -6,7 +6,7 @@ import {
   accordion, bindAccordions, reveal, photo, ICON, settleImages,
   field, fieldError, readForm, toast,
 } from '../ui.js';
-import { esc, toman, faDate, validPhone, $ } from '../util.js';
+import { esc, toman, faDate, validPhone, digitsOnly, latinDigits, $ } from '../util.js';
 import { state } from '../store.js';
 
 /* ---------------------------------------------------------------- about -- */
@@ -92,7 +92,7 @@ export function contact() {
               <div>${ICON.pin}<span>${esc(BRAND.address)}</span></div>
               <div>${ICON.clock}<span>${esc(BRAND.hours)}</span></div>
               <div>${ICON.phone}<span><a class="link lat" dir="ltr"
-              href="tel:${BRAND.phone.replace(/\D/g, '')}">${esc(BRAND.phone)}</a></span></div>
+              href="tel:${digitsOnly(latinDigits(BRAND.phone))}">${esc(BRAND.phone)}</a></span></div>
             </div>
             <div style="display:flex;gap:10px;flex-wrap:wrap;margin-block-start:24px">
               <a class="btn btn--sm" target="_blank" rel="noopener"
@@ -142,7 +142,7 @@ export function contact() {
                 placeholder: 'مثلاً: قدم ۱۸۰ و وزنم ۷۸ است، کدام سایز مناسبم است؟' })}
             </div>
             <button class="btn btn--block btn--sm" data-send style="margin-block-start:var(--s3)">
-              فرستادن در واتساپ
+              ادامه در واتساپ
             </button>
           </div>
 
@@ -194,7 +194,9 @@ export function faq() {
       ${accordion(FAQ.map((f, i) => ({ title: f.q, body: `<p>${esc(f.a)}</p>`, open: i === 0 })))}
       <div class="panel" style="margin-block-start:34px">
         <h3>جوابتان را پیدا نکردید؟</h3>
-        <p class="t-fine" style="margin-block-end:18px">در واتساپ بپرسید — معمولاً زیر ۱۵ دقیقه جواب می‌دهیم.</p>
+        <p class="t-fine" style="margin-block-end:18px">
+          در واتساپ بپرسید — در ساعت‌های کاری فروشگاه معمولاً زیر ۱۵ دقیقه جواب می‌دهیم.
+        </p>
         <a class="btn btn--sm" target="_blank" rel="noopener" href="https://wa.me/${BRAND.whatsapp}">پیام در واتساپ</a>
       </div>
     </div>`,

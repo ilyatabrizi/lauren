@@ -1,11 +1,11 @@
 // LAUREN — app shell: header, mobile menu, tab bar, routing, PWA install.
 
-import { BRAND } from './config.js';
+import { BRAND, TRUST, PREVIEW } from './config.js';
 import { route, start, setNotFound, onAfter, parse } from './router.js';
 import { bagCount, subscribe } from './store.js';
 import { ICON, reveal, settleImages, pushOverlay, popOverlay } from './ui.js';
 import { initBag, openBag } from './bag.js';
-import { $, $$, scrollTop, esc } from './util.js';
+import { $, $$, scrollTop, esc, digitsOnly, latinDigits } from './util.js';
 import { logoSvg, markSvg } from './brand.js';
 
 import home from './views/home.js';
@@ -31,6 +31,62 @@ const NAV = [
   { href: '#/about',           label: 'درباره‌ی لارن' },
   { href: '#/contact',         label: 'تماس' },
 ];
+
+/* ------------------------------------------------------------------ trust --
+ * A certificate renders ONLY when its `code` is a real string. A null draws a
+ * labelled empty frame in preview and nothing at all in production — never a
+ * seal shape, never an invented number, never a remote image. The rule lives
+ * here in the code, not only in the plan, so a fake badge cannot be shipped by
+ * editing copy.
+ */
+function certSlot(c) {
+  // Both, not either: an id with no image shipped <img src="">, which resolves
+  // to the page URL and re-fetches the document behind an empty seal frame.
+  if (typeof c.code === 'string' && c.code && c.img) {
+    const inner = `<img src="${esc(c.img)}" alt="${esc(c.name)}" width="86" height="86" loading="lazy">`;
+    return c.href
+      ? `<a class="ft__seal" href="${esc(c.href)}" target="_blank" rel="noopener"
+            aria-label="${esc(c.name)}">${inner}</a>`
+      : `<span class="ft__seal">${inner}</span>`;
+  }
+  if (!PREVIEW.enabled) return '';
+  return `<span class="ft__seal ft__seal--empty">
+    جای ${esc(c.name)}<small class="lat" dir="ltr">${esc(c.authority)}</small>
+  </span>`;
+}
+
+function trustBand() {
+  const tel = digitsOnly(latinDigits(TRUST.landline || ''));
+  const rows = [
+    TRUST.legalName && [ICON.shield, 'فروشنده', esc(TRUST.legalName)],
+    TRUST.licence && [ICON.info, 'پروانه کسب',
+      `<bdi class="lat">${esc(TRUST.licence)}</bdi>${
+        TRUST.licenceBody ? ` — ${esc(TRUST.licenceBody)}` : ''}`],
+    TRUST.landline && [ICON.phone, 'تلفن ثابت فروشگاه',
+      `<a class="lat" dir="ltr" href="tel:${esc(tel)}">${esc(TRUST.landline)}</a>`],
+    TRUST.email && [ICON.info, 'ایمیل',
+      `<a class="lat" dir="ltr" href="mailto:${esc(TRUST.email)}">${esc(TRUST.email)}</a>`],
+  ].filter(Boolean);
+
+  const seals = TRUST.certs.map(certSlot).filter(Boolean).join('');
+  if (!rows.length && !seals) return '';
+
+  return `
+  <div class="ft__trust">
+    <div>
+      <h4>هویت فروشگاه</h4>
+      <ul class="ft__idlist">
+        ${rows.map(([ic, label, value]) => `
+          <li><span class="ft__idic">${ic}</span><span>${label} — ${value}</span></li>`).join('')}
+      </ul>
+    </div>
+    ${seals ? `<div>
+      <div class="ft__seals">${seals}</div>
+      ${PREVIEW.enabled && TRUST.certs.some((c) => !c.code)
+        ? `<p class="ft__sealnote">${esc(TRUST.pendingNote)}</p>` : ''}
+    </div>` : ''}
+  </div>`;
+}
 
 function chrome() {
   document.body.insertAdjacentHTML('afterbegin', `
@@ -113,6 +169,9 @@ function chrome() {
           </ul>
         </div>
       </div>
+
+      ${trustBand()}
+
       <div class="ft__bot">
         <span>© ${new Date().getFullYear()} ${BRAND.name} — تمام حقوق محفوظ است.</span>
         <span class="lat">${esc(BRAND.tagline)}</span>

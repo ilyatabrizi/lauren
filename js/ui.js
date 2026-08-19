@@ -2,7 +2,7 @@
 
 import { LQIP } from './placeholders.js';
 import { toman, esc, $, $$ } from './util.js';
-import { inWish, toggleWish } from './store.js';
+import { inWish, toggleWish, reviewSummary } from './store.js';
 
 /* ---------------------------------------------------------------- icons -- */
 const svg = (d, extra = '') =>
@@ -40,6 +40,7 @@ export const ICON = {
   plus:   svg('<path d="M12 6v12M6 12h12"/>'),
   minus:  svg('<path d="M6 12h12"/>'),
   ruler:  svg('<path d="m3.5 14.5 11-11 5 5-11 11-5-5Z"/><path d="m7 11 1.8 1.8M10 8l1.8 1.8M13 5l1.8 1.8"/>'),
+  star:   svg('<path d="m12 4 2.4 5 5.6.8-4 3.9 1 5.5-5-2.6-5 2.6 1-5.5-4-3.9 5.6-.8L12 4Z"/>'),
 };
 
 /* ------------------------------------------------------- overlay history -- */
@@ -137,6 +138,13 @@ export function productCard(p, { eager = false } = {}) {
       <span class="card__ref">لارن <span class="num">${esc(p.ref)}</span></span>
       <h3 class="card__title">${esc(p.title)}</h3>
       <span class="card__meta">${esc(p.colorName)}</span>
+      ${(() => {
+        // Nothing at all when the garment has no REAL reviews — a «بدون امتیاز»
+        // placeholder is noise, and samples never reach an aggregate.
+        const s = reviewSummary(p.family);
+        return s.count ? `<span class="card__rate">${stars(Math.round(s.avg))}
+          <span>${s.count}</span></span>` : '';
+      })()}
       <div class="card__price">
         <span>${toman(p.price)}</span>
         ${p.compareAt ? `<s class="card__was">${toman(p.compareAt)}</s>` : ''}
@@ -144,6 +152,13 @@ export function productCard(p, { eager = false } = {}) {
     </a>
   </article>`;
 }
+
+/** A row of five stars. Filled ones are INK, not accent: the PDP's accent
+ *  budget is already spent on .pdp__ref and the four .trust icons. */
+export const stars = (n, cls = '') => `<span class="stars ${cls}" role="img"
+  aria-label="${n} از ۵ ستاره">${
+  [1, 2, 3, 4, 5].map((i) => `<span aria-hidden="true" class="${i <= n ? 'is-on' : ''}">${ICON.star}</span>`).join('')
+}</span>`;
 
 /** Wire the heart buttons inside a freshly rendered container. */
 export function bindCards(root = document) {

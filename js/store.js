@@ -1,8 +1,8 @@
 // LAUREN — client state.
 // Everything persists to localStorage; this preview has no server.
 
-import { SHOP } from './config.js';
-import { byId, PRODUCTS } from './data.js';
+import { SHOP, PREVIEW } from './config.js';
+import { byId, PRODUCTS, SAMPLE_REVIEWS } from './data.js';
 import { uid, clamp } from './util.js';
 
 const KEY = 'lauren.v3';
@@ -23,6 +23,10 @@ const blank = () => ({
   accounts: {},     // phone -> { credit, spend12, ledger, orders, addresses, name, joined }
   recent: [],
   notify: [],       // 'productId|size' the shopper asked to be told about
+  // { id, family, productId, color, size, orderId, phone, name, stars, body, ts }
+  // Browser-wide on purpose — written by one customer, read by every visitor.
+  // Deliberately NOT in OWNED: signing out would erase the shop's whole list.
+  reviews: [],
   coupon: null,
 });
 
@@ -316,6 +320,112 @@ export function notifyMe(id, size) {
   return false;
 }
 export const isNotifying = (id, size) => (state.notify || []).includes(`${id}|${size}`);
+/** Withdraw a restock request. Without this the list only ever grows. */
+export function forgetNotify(key) {
+  const i = (state.notify || []).indexOf(key);
+  if (i < 0) return false;
+  state.notify.splice(i, 1);
+  commit('notify');
+  return true;
+}
+
+/* ---------------------------------------------------------------- reviews */
+/* Keyed to `family`, not to a product id. What a review is actually about —
+ * fit, fabric weight, stitching, how the size ran, how it washed — is carried
+ * by the fields that are identical across a colourway family. Keying on the id
+ * would scatter 12 buckets across 6 garments and leave most of them empty,
+ * and would let one person review the same garment twice by buying it in two
+ * colours. The colourway is not lost: each record keeps the colour and size
+ * actually bought, and prints them under the review.
+ *
+ * The collection is browser-wide, NOT in OWNED: a review is written by one
+ * customer and read by every visitor, so scoping it to an account would make
+ * signOut's adopt(null) erase the shop's whole list. Authorship rides inside
+ * each record instead, which is what survives account switching.
+ */
+const reviewList = () => (state.reviews = state.reviews || []);
+
+export const reviewsFor = (fam) =>
+  reviewList().filter((r) => r.family === fam).sort((a, b) => b.ts - a.ts);
+
+export const myReview = (fam) => {
+  const phone = state.user?.phone;
+  return phone ? reviewList().find((r) => r.family === fam && r.phone === phone) || null : null;
+};
+
+/** Three gates: signed in, owns a delivered order, that order held this garment.
+ *  Returns the proof — the order and the line item — or null. */
+export function canReview(fam) {
+  if (!state.user?.phone) return null;
+  for (const o of state.orders) {
+    if (o.cancelledAt) continue;
+    const st = orderStage(o);
+    if (st.stages[st.at]?.key !== 'done') continue;
+    const item = o.items.find((i) => byId(i.id)?.family === fam);
+    if (item) return { order: o, item };
+  }
+  return null;
+}
+
+/** Upsert: the same phone reviewing the same garment edits in place. */
+export function saveReview({ family, stars, body }) {
+  const proof = canReview(family);
+  if (!proof) return null;
+  const list = reviewList();
+  const clean = String(body || '').trim().slice(0, 600);
+  const n = Math.round(Math.min(5, Math.max(1, Number(stars) || 0)));
+  const existing = myReview(family);
+  if (existing) {
+    Object.assign(existing, { stars: n, body: clean, ts: Date.now() });
+    commit('review');
+    return existing;
+  }
+  const rec = {
+    id: uid('RV'),
+    family,
+    productId: proof.item.id,
+    color: proof.item.color,
+    size: proof.item.size,
+    orderId: proof.order.id,
+    phone: state.user.phone,
+    name: String(state.user.name || '').trim().split(/\s+/)[0] || 'مشتری لارن',
+    stars: n,
+    body: clean,
+    ts: Date.now(),
+  };
+  list.unshift(rec);
+  commit('review');
+  return rec;
+}
+
+export function removeReview(id) {
+  const list = reviewList();
+  const i = list.findIndex((r) => r.id === id && r.phone === state.user?.phone);
+  if (i < 0) return false;
+  list.splice(i, 1);
+  commit('review');
+  return true;
+}
+
+/** REAL reviews only. A sample can never move a number that looks like a fact. */
+export function reviewSummary(fam) {
+  const list = reviewsFor(fam);
+  const dist = [0, 0, 0, 0, 0];
+  list.forEach((r) => { dist[r.stars - 1] += 1; });
+  return {
+    count: list.length,
+    avg: list.length ? list.reduce((n, r) => n + r.stars, 0) / list.length : 0,
+    dist,
+  };
+}
+
+/** What the page renders: real reviews, then the labelled samples — and only
+ *  while this is a preview build. Samples are never written to state. */
+export const shownReviews = (fam) => [
+  ...reviewsFor(fam),
+  ...(PREVIEW.enabled ? SAMPLE_REVIEWS.filter((r) => r.family === fam) : []),
+];
+
 export function placeOrder({ address, shippingId, gateway, t, ref }) {
   const order = {
     id: uid('LR'),

@@ -54,6 +54,11 @@ export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => (
 export const validPhone = (v) => /^09\d{9}$/.test(String(v).replace(/\D/g, ''));
 export const validPostal = (v) => /^\d{10}$/.test(String(v).replace(/\D/g, ''));
 export const digitsOnly = (v) => String(v).replace(/\D/g, '');
+// \D is [^0-9], so it DELETES ۰–۹ rather than keeping them. Anything holding
+// Persian numerals — BRAND.phone does — must come through here first, or
+// digitsOnly returns the empty string and a tel: link silently stops dialling.
+export const latinDigits = (s) =>
+  String(s ?? '').replace(/[۰-۹]/g, (d) => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d));
 
 /** Luhn — used only to make the preview gateway behave like a real one. */
 export const luhn = (num) => {
