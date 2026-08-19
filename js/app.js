@@ -108,7 +108,11 @@ function chrome() {
       </div>
     </div>
   </header>
+  </div>
 
+  <!-- The menu is a SIBLING of .topbar, not a child. .topbar is fixed with
+       z-index:90, which makes a stacking context; nested here the menu's own
+       z-index:130 was resolved inside it and the tab bar painted on top. -->
   <div class="mmenu" data-mmenu>
     <button class="iconbtn mmenu__close" data-mclose aria-label="بستن">${ICON.close}</button>
     <nav>
@@ -247,6 +251,12 @@ function markActive(ctx) {
     if (on) { a.setAttribute('aria-current', 'page'); active = a; }
     else a.removeAttribute('aria-current');
   });
+  // An unknown URL owns no tab, and this file's own comment says a tab bar with
+  // nothing selected reads as broken. Let home adopt whatever fell through.
+  if (!active) {
+    active = $('[data-tabnav="/"]');
+    active?.setAttribute('aria-current', 'page');
+  }
   movePill(active);
 }
 
@@ -295,7 +305,10 @@ function movePill(tab) {
   const bar = tab.closest('.tabbar');
   // hidden bars measure 0 — wait until it is laid out or the pill lands at 0
   if (!bar || !bar.offsetWidth) { pill.style.opacity = '0'; return; }
-  const x = tab.offsetLeft - 5;
+  // offsetLeft is measured from the offsetParent's padding edge, and the pill's
+  // `left:0` starts at that same origin — so subtracting the 5px padding was
+  // compensating for a gap that was never there and drew the pill off its tab.
+  const x = tab.offsetLeft;
   pill.style.width = `${tab.offsetWidth}px`;
   pill.style.opacity = '1';
   if (!pillSpring) {
@@ -318,19 +331,29 @@ function initPWA() {
   const dismissed = localStorage.getItem('lauren.a2hs') === 'no';
   let deferred = null;
 
+  // The banner floats, so nothing reserves room for it and it lands on the last
+  // lines of the footer. Publish its measured height (a hard-coded guess breaks
+  // the moment the Persian copy wraps to a third line) and let CSS clear it.
+  const showBar = (on) => {
+    bar.classList.toggle('is-on', on);
+    document.body.classList.toggle('a2hs-on', on);
+    document.documentElement.style.setProperty(
+      '--a2hs-h', on ? `${bar.offsetHeight + 8}px` : '0px');
+  };
+
   addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferred = e;
-    if (!dismissed) setTimeout(() => bar.classList.add('is-on'), 4000);
+    if (!dismissed) setTimeout(() => showBar(true), 4000);
   });
 
   $('[data-install]')?.addEventListener('click', async () => {
-    bar.classList.remove('is-on');
+    showBar(false);
     if (deferred) { deferred.prompt(); await deferred.userChoice; deferred = null; }
   });
 
   $('[data-a2hs-x]')?.addEventListener('click', () => {
-    bar.classList.remove('is-on');
+    showBar(false);
     localStorage.setItem('lauren.a2hs', 'no');
   });
 
@@ -340,7 +363,7 @@ function initPWA() {
   if (iOS && !standalone && !dismissed) {
     $('[data-install]').remove();
     bar.querySelector('p').textContent = 'دکمه‌ی اشتراک‌گذاری ← «Add to Home Screen»';
-    setTimeout(() => bar.classList.add('is-on'), 5000);
+    setTimeout(() => showBar(true), 5000);
   }
 }
 

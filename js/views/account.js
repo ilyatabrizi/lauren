@@ -378,6 +378,16 @@ export default function account(ctx) {
     mount(root) {
       bindCards(root); reveal(root); settleImages(root);
 
+      // The tab strip scrolls sideways on a phone and starts at the inline
+      // start, so the later tabs — and the selected one — sit off the rail with
+      // nothing looking chosen. Bring the active one into its own scroller
+      // without moving the page.
+      const nav = $('.acct__nav', root);
+      const on = nav && $('.is-on', nav);
+      if (nav && on) {
+        nav.scrollLeft = on.offsetLeft - (nav.clientWidth - on.offsetWidth) / 2;
+      }
+
       $$('[data-tab]', root).forEach((b) =>
         b.addEventListener('click', () => go(`/account?tab=${b.dataset.tab}`)));
 

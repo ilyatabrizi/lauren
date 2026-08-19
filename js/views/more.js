@@ -650,7 +650,13 @@ export function exchange(ctx) {
       $('[data-form]', root).addEventListener('submit', (e) => {
         e.preventDefault();
         if (!toSize) {
-          $('[data-sizeerr]', root).textContent = 'سایز جدید را انتخاب کنید';
+          // The error prints beside the size picker, ~460px above the button
+          // that was just tapped — on a phone the shopper sees nothing happen
+          // and reads the button as dead. Take them to the message.
+          const err = $('[data-sizeerr]', root);
+          err.textContent = 'سایز جدید را انتخاب کنید';
+          $('[data-newsize]', root)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+          toast('سایز جدید را انتخاب کنید', 'info');
           return;
         }
         const rec = requestExchange(o.id, { itemIndex, toSize, reason });

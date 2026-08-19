@@ -300,6 +300,9 @@ main { min-height: 60vh; }
 }
 .sec__head h2 { margin-block-start: var(--s2); }
 .page-top { padding-block-start: calc(var(--top-h) + var(--s6)); }
+/* anything scrolled to by script must clear the fixed top bar — without this
+   the reviews deep link parks its heading behind the header */
+[id] { scroll-margin-block-start: calc(var(--top-h) + var(--s4)); }
 
 /* ================================================================ hero === */
 .hero {
@@ -470,6 +473,10 @@ main { min-height: 60vh; }
 .sel option { background: var(--vitrine); color: var(--ink); }
 
 .empty { text-align: center; padding-block: clamp(56px, 11vw, 120px); }
+/* `padding-block` is a shorthand and .empty comes later in the sheet, so on a
+   .page-top.empty it silently reset the top-bar clearance and dropped the
+   heading under the fixed header. */
+.page-top.empty { padding-block-start: calc(var(--top-h) + var(--s6)); }
 .empty svg { width: 34px; height: 34px; margin-inline: auto; color: var(--muted); stroke-width: 1.2; }
 .empty h3 { margin-block: var(--s4) var(--s2); font-size: 19px; font-weight: 400; }
 
@@ -487,7 +494,7 @@ main { min-height: 60vh; }
 .crumbs { display: flex; gap: var(--s2); font-size: 12.5px; color: var(--muted); margin-block-end: var(--s4); }
 .crumbs a:hover { color: var(--ink); }
 
-.pdp__ref { font-size: 12px; color: var(--thread); font-weight: 500; }
+.pdp__ref { font-size: 12px; color: var(--thread-d); font-weight: 500; }
 .pdp h1 { font-size: clamp(24px, 3vw, 32px); font-weight: 400; margin-block-start: var(--s1); }
 .pdp__latin { margin-block-start: var(--s1); }
 .pdp__price { display: flex; align-items: baseline; gap: var(--s3); margin-block: var(--s5) var(--s1); }
@@ -559,7 +566,7 @@ main { min-height: 60vh; }
 .acc__body li { display: flex; gap: var(--s2); padding-block: 2px; }
 .acc__body li::before { content: '—'; color: var(--edge); flex: none; }
 
-.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tbl { min-width: max-content; width: 100%; border-collapse: collapse; font-size: 13px; }
 .tbl th, .tbl td { padding: var(--s3) var(--s2); text-align: start; border-block-end: 1px solid var(--rule); }
 .tbl th { font-weight: 500; font-size: 12px; }
 .tbl td { color: var(--muted); }
@@ -769,7 +776,13 @@ main { min-height: 60vh; }
 .coupon input:focus { outline: none; border-color: var(--ink); }
 
 /* ============================================================= gateway === */
-.gate { min-height: 100svh; display: grid; place-items: center; padding: var(--s4); background: #10131A; }
+.gate {
+  min-height: 100svh; display: grid; place-items: center;
+  /* body.on-gateway hides .topbar, which was the only element paying --sat, so
+     without these the card's bank name and countdown ride under the notch. */
+  padding: calc(var(--s4) + var(--sat)) var(--s4) calc(var(--s4) + var(--sab));
+  background: #10131A;
+}
 .gate__card { width: min(500px, 100%); background: #FBFBF9; color: #16181C; overflow: hidden; }
 .gate__top { background: #16181C; color: #F3F2EF; padding: var(--s4); display: flex; align-items: center; justify-content: space-between; gap: var(--s3); }
 .gate__bank { display: flex; align-items: center; gap: var(--s3); font-size: 14px; }
@@ -795,7 +808,7 @@ main { min-height: 60vh; }
 .gate__pay:disabled { opacity: .45; }
 .gate__cancel { height: 52px; padding-inline: var(--s4); border: 1px solid #D6D7DB; color: #5B616A; font-size: 14px; white-space: nowrap; }
 @media (max-width: 460px) {
-  .gate { padding: var(--s2); }
+  .gate { padding: calc(var(--s2) + var(--sat)) var(--s2) calc(var(--s2) + var(--sab)); }
   .gate__f input { letter-spacing: .04em; font-size: 14px; }
   .gate__btns { grid-template-columns: 1fr; }
 }
@@ -973,8 +986,14 @@ body.tabs-away .tabbar {
   background: rgba(239, 238, 233, .82);
   -webkit-backdrop-filter: blur(30px) saturate(180%);
   backdrop-filter: blur(30px) saturate(180%);
-  padding: calc(var(--sat) + var(--s7)) var(--pad) var(--s7);
-  display: grid; align-content: center;
+  padding: calc(var(--sat) + var(--s7)) var(--pad) calc(var(--tab-h) + var(--s5));
+  display: grid;
+  /* `center` alone clips the overflow at BOTH ends once the list is taller than
+     the screen — which it is on a 667px phone. `safe center` centres only while
+     it fits; older engines ignore the keyword and keep the plain value. */
+  align-content: center;
+  align-content: safe center;
+  overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
   opacity: 0; pointer-events: none; transition: opacity .3s var(--ease);
 }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
@@ -985,7 +1004,7 @@ body.tabs-away .tabbar {
 .mmenu nav a { font-size: clamp(26px, 7.5vw, 40px); font-weight: 300; padding-block: 6px; opacity: 0; transform: translateY(10px); }
 .mmenu.is-open nav a { animation: mIn .45s var(--ease-o) forwards; }
 @keyframes mIn { to { opacity: 1; transform: none; } }
-.mmenu__close { position: absolute; inset-block-start: calc(var(--sat) + var(--s3)); inset-inline-end: var(--pad); }
+.mmenu__close { position: fixed; inset-block-start: calc(var(--sat) + var(--s3)); inset-inline-end: var(--pad); }
 .mmenu__ft { margin-block-start: var(--s7); display: grid; gap: var(--s2); font-size: 13px; color: var(--muted); }
 
 .lightbox {
@@ -1016,7 +1035,7 @@ body.tabs-away .tabbar {
   margin-block-start: var(--s7); border-block-start: 1px solid var(--rule);
   font-size: 12px; color: var(--muted);
 }
-@media (min-width: 901px) { .ft__bot { padding-block-end: var(--s5); } }
+@media (min-width: 901px) { .ft__bot { padding-block-end: calc(var(--s5) + var(--a2hs-h, 0px)); } }
 .socials { display: flex; gap: var(--s2); margin-block-start: var(--s5); }
 .socials a {
   width: 40px; height: 40px; display: grid; place-items: center;
@@ -1074,9 +1093,20 @@ body.tabs-away .tabbar {
   z-index: 92; max-width: 440px; margin-inline: auto;
   background: var(--vitrine); border: 1px solid var(--edge);
   padding: var(--s3); display: flex; gap: var(--s3); align-items: center;
-  transform: translateY(200%); transition: transform .5s var(--ease-o);
+  /* translateY(200%) is only 140px, but on a phone this sits var(--tab-h) up —
+     so the 'hidden' banner was still leaking ~42px onto the screen. The
+     transform does the animation; visibility does the actual hiding. */
+  transform: translateY(200%); visibility: hidden;
+  transition: transform .5s var(--ease-o), visibility 0s linear .5s;
 }
-.a2hs.is-on { transform: none; }
+.a2hs.is-on {
+  transform: none; visibility: visible;
+  transition: transform .5s var(--ease-o), visibility 0s;
+}
+/* ...but never on top of an overlay the shopper deliberately opened. */
+body:has(.mmenu.is-open) .a2hs,
+body:has(.drawer.is-open) .a2hs,
+body:has(.lightbox.is-open) .a2hs { transform: translateY(200%); visibility: hidden; }
 .a2hs img { width: 40px; height: 40px; flex: none; }
 .a2hs b { font-size: 13.5px; font-weight: 500; display: block; }
 .a2hs p { font-size: 11.5px; color: var(--muted); line-height: 1.6; }
@@ -1129,6 +1159,33 @@ body.tabs-away .tabbar {
 .rating button[aria-pressed="true"] svg { fill: var(--ink); }
 .rating button:hover { border-color: var(--ink); }
 
+
+/* An on-screen keyboard takes half the phone, and floating chrome then lands
+   on top of the very field being filled in. Retract it while one has focus. */
+body:has(#view input:focus, #view textarea:focus, #view select:focus) .a2hs {
+  transform: translateY(200%); visibility: hidden;
+}
+
+/* ------------------------------------------------------- touch targets -- */
+/* A 16x16 delete button is a real control on a phone. Rather than inflate the
+   design, extend the HIT AREA with a centred pseudo-element — the control keeps
+   its size, the finger gets its 44px. Applied only where a finger is used. */
+@media (pointer: coarse) {
+  .qty button, [data-del], .card__fav, .mmenu__close, [data-a2hs-x], .lightbox button,
+  .crumbs a, .ft ul a, .miniline a {
+    position: relative;
+  }
+  /* the swatch is the primary variant control on every product page, and the
+     filter rail is how the catalogue is navigated — both get the real 44px */
+  .sw { width: 44px; height: 44px; }
+  .chip, .shopbar select { height: 44px; }
+  .qty button::after, [data-del]::after, .card__fav::after,
+  .mmenu__close::after, [data-a2hs-x]::after, .lightbox button::after {
+    content: ''; position: absolute; top: 50%; left: 50%;
+    width: 44px; height: 44px; transform: translate(-50%, -50%);
+  }
+}
+
 /* reveal */
 .rv { opacity: 0; transform: translateY(16px); }
 .rv.in { opacity: 1; transform: none; transition: opacity .7s var(--ease-o), transform .7s var(--ease-o); }
@@ -1147,6 +1204,10 @@ body.tabs-away .tabbar {
   .iconbtn.is-dupe { display: none; }
   body.has-tabbar main { padding-block-end: var(--s5); }
   body.has-tabbar .toast { inset-block-end: calc(var(--tab-h) + var(--s3)); }
+  body.a2hs-on .toast { inset-block-end: calc(var(--tab-h) + var(--a2hs-h, 0px) + var(--s3)); }
   body.has-tabbar .a2hs  { inset-block-end: calc(var(--tab-h) + var(--s2)); }
+  /* The banner floats over the page, so nothing reserved room for it and it sat
+     permanently on the last lines of the footer. On iOS it is always shown. */
+  body.a2hs-on .ft__bot { padding-block-end: calc(var(--s5) + var(--tab-h) + var(--a2hs-h, 0px)); }
 }
 @media (min-width: 901px) { .mmenu { display: none; } }

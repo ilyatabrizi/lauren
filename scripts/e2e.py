@@ -523,10 +523,17 @@ def run(page, errors):
     outs = page.locator('[data-size][data-out]').count()
     check('every size in the ladder is shown, sold-out included',
           sizes == 5 and outs >= 1, f"{sizes} sizes, {outs} sold out")
+    # v4 makes a sold-out size open a pre-written WhatsApp message. Stub it, or
+    # the suite spawns a live api.whatsapp.com tab mid-run and the pages that
+    # follow become flaky.
+    page.evaluate("() => { window.__wa = null; window.open = (u) => { window.__wa = u; return null; }; }")
     page.locator('[data-size][data-out]').first.click()
     page.wait_for_timeout(500)
     check('a sold-out size can be subscribed to',
           page.locator('[data-size].is-noted').count() >= 1)
+    wa = page.evaluate('window.__wa')
+    check('a sold-out size hands off to WhatsApp instead of promising a callback',
+          bool(wa) and 'wa.me' in wa, wa)
 
     page.goto(f'{BASE}/#/p/set-onyx', wait_until='networkidle')
     page.wait_for_timeout(600)
@@ -797,6 +804,114 @@ def run(page, errors):
           faces['count'] == 'YekanX', faces)
     check('the star-distribution labels render in the Persian face',
           faces['dist'] == 'YekanX', faces)
+
+    # ------------------------------------------------------------- mobile (M)
+    # The owner found this on a real iPhone: the tab bar and the install banner
+    # painted OVER the open menu, and the menu's last items were unreachable.
+    print('\nmobile chrome')
+    page.set_viewport_size({'width': 393, 'height': 852})
+    page.goto(f'{BASE}/#/', wait_until='networkidle')
+    page.wait_for_timeout(900)
+    # Playwright cannot evaluate env(safe-area-inset-*); inject a notched iPhone
+    # so --tab-h is the real 104px and not 70px.
+    page.add_style_tag(content=':root{--sat:59px !important;--sab:34px !important;}')
+    page.wait_for_timeout(300)
+
+    check('the menu is not trapped in the top bar stacking context',
+          page.evaluate("() => !document.querySelector('.mmenu').closest('.topbar')"))
+
+    page.click('[data-menu]')
+    page.wait_for_timeout(800)
+    over = page.evaluate("""() => {
+      const t = document.querySelector('.tabbar').getBoundingClientRect();
+      const el = document.elementFromPoint(Math.round(t.x + t.width / 2),
+                                           Math.round(t.y + t.height / 2));
+      return el ? !!el.closest('.mmenu') : false;
+    }""")
+    check('the open menu covers the tab bar', over)
+
+    menu = page.evaluate("""() => {
+      const m = document.querySelector('.mmenu');
+      return { overflowY: getComputedStyle(m).overflowY,
+               scrollable: m.scrollHeight - m.clientHeight };
+    }""")
+    check('a menu taller than the phone can be scrolled',
+          menu['overflowY'] in ('auto', 'scroll'), menu)
+
+    page.evaluate("() => { const m = document.querySelector('.mmenu'); m.scrollTop = m.scrollHeight; }")
+    page.wait_for_timeout(400)
+    foot = page.evaluate("""() => {
+      const f = document.querySelector('.mmenu__ft').getBoundingClientRect();
+      const t = document.querySelector('.tabbar').getBoundingClientRect();
+      return { onScreen: f.top >= 0 && f.bottom <= innerHeight, clearOfTabbar: f.bottom <= t.top };
+    }""")
+    check('the menu footer can be scrolled clear of the tab bar',
+          foot['onScreen'] and foot['clearOfTabbar'], foot)
+
+    # translateY(200%) is only 140px, but on a phone the banner sits var(--tab-h)
+    # up — so the 'hidden' state used to leak ~42px onto the screen.
+    check('the install banner stays out of the way of an open menu',
+          page.evaluate("() => getComputedStyle(document.querySelector('.a2hs')).visibility") == 'hidden')
+
+    # close the menu first: the overlay rule above would otherwise keep the
+    # banner hidden and this check could not tell the two causes apart
+    page.click('[data-mclose]')
+    page.wait_for_timeout(700)
+    banner = page.evaluate("""() => {
+      const a = document.querySelector('.a2hs');
+      const before = getComputedStyle(a).visibility;
+      a.classList.add('is-on');
+      const shown = getComputedStyle(a).visibility;
+      a.classList.remove('is-on');
+      return { hiddenAtRest: before, shownWhenAsked: shown };
+    }""")
+    check('the install banner does not paint until it is asked for',
+          banner['hiddenAtRest'] == 'hidden' and banner['shownWhenAsked'] == 'visible', banner)
+
+    check('no horizontal overflow on a phone',
+          page.evaluate("() => document.documentElement.scrollWidth <= document.documentElement.clientWidth"),
+          page.evaluate("() => document.documentElement.scrollWidth - document.documentElement.clientWidth"))
+
+    # the banner floats, so nothing reserved room for it and it landed on the
+    # last two lines of the footer, at maximum scroll, on every route
+    page.evaluate("""() => {
+      const b = document.querySelector('.a2hs');
+      b.classList.add('is-on');
+      document.body.classList.add('a2hs-on');
+      document.documentElement.style.setProperty('--a2hs-h', (b.offsetHeight + 8) + 'px');
+    }""")
+    page.wait_for_timeout(500)
+    page.evaluate("() => window.scrollTo(0, document.body.scrollHeight)")
+    page.wait_for_timeout(600)
+    foot2 = page.evaluate("""() => {
+      const s = document.querySelector('.ft__bot span');
+      const a = document.querySelector('.a2hs');
+      const S = s.getBoundingClientRect(), A = a.getBoundingClientRect();
+      return { copyrightBottom: Math.round(S.bottom), bannerTop: Math.round(A.top),
+               clear: S.bottom <= A.top };
+    }""")
+    check('the footer clears the install banner at full scroll', foot2['clear'], foot2)
+
+    # body.on-gateway hides .topbar, the only element that was paying --sat
+    gate = page.evaluate("""() => {
+      const d = document.createElement('div'); d.className = 'gate';
+      document.body.appendChild(d);
+      const pt = parseFloat(getComputedStyle(d).paddingTop);
+      const sat = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sat')) || 0;
+      d.remove();
+      return { padTop: pt, sat };
+    }""")
+    check('the gateway pays the safe-area inset itself',
+          gate['padTop'] >= gate['sat'], gate)
+
+    # an unknown URL owns no tab, and a tab bar with nothing lit reads as broken
+    page.goto(f'{BASE}/#/some-bogus-url', wait_until='networkidle')
+    page.wait_for_timeout(800)
+    check('an unknown route still lights a tab',
+          page.locator('.tabbar a[aria-current="page"]').count() == 1,
+          page.locator('.tabbar a[aria-current="page"]').count())
+
+    page.set_viewport_size({'width': 1400, 'height': 900})
 
     print('\nconsole')
     check('no console errors', not errors, errors[:3])
