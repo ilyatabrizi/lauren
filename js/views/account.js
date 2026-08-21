@@ -7,8 +7,7 @@ import {
 } from '../store.js';
 import {
   ICON, field, fieldError, readForm, toast, productCard,
-  bindCards, reveal, settleImages,
-} from '../ui.js';
+  bindCards, reveal, settleImages, photoUrl,} from '../ui.js';
 import { markSvg } from '../brand.js';
 import { toman, tomanRound, esc, faDate, validPhone, validPostal, digitsOnly, $, $$ } from '../util.js';
 import { go } from '../router.js';
@@ -231,7 +230,7 @@ function ordersPanel() {
         </div>
       </div>
       <div class="order__thumbs">
-        ${o.items.map((i) => `<span><img src="assets/products/${i.img}.jpg" alt="${esc(i.title)}" loading="lazy"></span>`).join('')}
+        ${o.items.map((i) => `<span><img src="${photoUrl(i.img)}" alt="${esc(i.title)}" loading="lazy"></span>`).join('')}
       </div>
       <div class="order__foot t-fine">
         <span>${o.cancelledAt ? 'اعتبار برگشت داده شد'

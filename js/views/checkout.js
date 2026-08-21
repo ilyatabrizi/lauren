@@ -2,7 +2,7 @@
 
 import { SHOP, PREVIEW, BRAND } from '../config.js';
 import { totals, state, saveAddress, signIn, setName, commit } from '../store.js';
-import { field, fieldError, readForm, ICON, toast, settleImages } from '../ui.js';
+import { field, fieldError, readForm, ICON, toast, settleImages, photoUrl,} from '../ui.js';
 import { toman, tomanRound, esc, validPhone, validPostal, digitsOnly, $, $$ } from '../util.js';
 import { go, refresh } from '../router.js';
 
@@ -25,7 +25,7 @@ export function summaryPanel(t, { editable = true } = {}) {
       <div class="minilines">
         ${t.lines.map((l) => `
           <div class="miniline">
-            <img src="assets/products/${l.product.gallery[0]}.jpg" alt="" loading="lazy">
+            <img src="${photoUrl(l.product.gallery[0])}" alt="" loading="lazy">
             <div>
               ${esc(l.product.title)}
               <span>${esc(l.product.colorName)} · سایز <bdi class="lat">${esc(l.size)}</bdi>${

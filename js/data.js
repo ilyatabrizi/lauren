@@ -1,5 +1,9 @@
 // LAUREN — catalogue.
-// Photography is the store's own; image keys map to assets/products/<key>.jpg
+// PLACEHOLDER PHOTOGRAPHY. These are free stock frames from Pexels, pulled by
+// scripts/fetch_photos.py — they are NOT Lauren's garments. They exist so the
+// v5 design can be judged with real images. Replace every one with a real
+// shoot before this is shown to a paying customer. Keys map to
+// assets/photos/<key>--<size>.jpg.
 // Products that share a `family` are the same style in another colourway and
 // cross-link as swatches on the product page.
 
@@ -33,7 +37,7 @@ export const PRODUCTS = [
     sizes: ['S', 'M', 'L', 'XL', 'XXL'],
     stock: { S: 6, M: 6, L: 6, XL: 6, XXL: 2 },
     sizeChart: 'top',
-    gallery: ['polo-noir', 'polo-noir--detail'],
+    gallery: ['polo-noir', 'polo-noir--closeup'],
     care: CARE,
   },
   {
@@ -55,7 +59,7 @@ export const PRODUCTS = [
     sizes: ['S', 'M', 'L', 'XL', 'XXL'],
     stock: { S: 2, M: 6, L: 6, XL: 6, XXL: 6 },
     sizeChart: 'top',
-    gallery: ['polo-blanc', 'polo-blanc--detail'],
+    gallery: ['polo-blanc', 'polo-blanc--closeup'],
     care: CARE,
   },
   {
@@ -77,7 +81,7 @@ export const PRODUCTS = [
     sizes: ['S', 'M', 'L', 'XL', 'XXL'],
     stock: { S: 0, M: 2, L: 6, XL: 6, XXL: 0 },
     sizeChart: 'top',
-    gallery: ['polo-steel', 'polo-steel--detail'],
+    gallery: ['polo-steel', 'polo-steel--closeup'],
     care: CARE,
   },
   {
@@ -99,7 +103,7 @@ export const PRODUCTS = [
     sizes: ['S', 'M', 'L', 'XL', 'XXL'],
     stock: { S: 0, M: 6, L: 6, XL: 6, XXL: 6 },
     sizeChart: 'top',
-    gallery: ['polo-jade', 'polo-jade--detail'],
+    gallery: ['polo-jade', 'polo-jade--closeup'],
     care: CARE,
   },
   {
@@ -120,7 +124,7 @@ export const PRODUCTS = [
     sizes: ['S', 'M', 'L', 'XL', 'XXL'],
     stock: { S: 0, M: 6, L: 6, XL: 2, XXL: 0 },
     sizeChart: 'top',
-    gallery: ['polo-bordeaux', 'polo-bordeaux--detail'],
+    gallery: ['polo-bordeaux', 'polo-bordeaux--closeup'],
     care: CARE,
   },
   {
@@ -142,7 +146,7 @@ export const PRODUCTS = [
     sizes: ['S', 'M', 'L', 'XL', 'XXL'],
     stock: { S: 2, M: 6, L: 6, XL: 6, XXL: 0 },
     sizeChart: 'top',
-    gallery: ['polo-collar', 'polo-collar--detail'],
+    gallery: ['polo-collar', 'polo-collar--closeup'],
     care: CARE,
   },
   {
@@ -164,7 +168,7 @@ export const PRODUCTS = [
     sizes: ['S', 'M', 'L', 'XL', 'XXL'],
     stock: { S: 6, M: 6, L: 6, XL: 2, XXL: 0 },
     sizeChart: 'top',
-    gallery: ['knit-ivory', 'knit-ivory--detail'],
+    gallery: ['knit-ivory', 'knit-ivory--closeup'],
     care: CARE,
   },
   {
@@ -185,7 +189,7 @@ export const PRODUCTS = [
     sizes: ['S', 'M', 'L', 'XL', 'XXL'],
     stock: { S: 0, M: 6, L: 6, XL: 6, XXL: 0 },
     sizeChart: 'top',
-    gallery: ['knit-sand', 'knit-sand--detail'],
+    gallery: ['knit-sand', 'knit-sand--closeup'],
     care: CARE,
   },
   {
@@ -208,7 +212,7 @@ export const PRODUCTS = [
     sizes: ['S', 'M', 'L', 'XL', 'XXL'],
     stock: { S: 0, M: 6, L: 6, XL: 6, XXL: 2 },
     sizeChart: 'set',
-    gallery: ['set-onyx', 'set-onyx--detail'],
+    gallery: ['set-onyx', 'set-onyx--closeup'],
     care: CARE,
   },
   {
@@ -230,7 +234,7 @@ export const PRODUCTS = [
     sizes: ['S', 'M', 'L', 'XL', 'XXL'],
     stock: { S: 0, M: 6, L: 6, XL: 6, XXL: 6 },
     sizeChart: 'set',
-    gallery: ['set-cacao', 'set-cacao--detail'],
+    gallery: ['set-cacao', 'set-cacao--closeup'],
     care: CARE,
   },
   {
@@ -252,7 +256,7 @@ export const PRODUCTS = [
     sizes: ['S', 'M', 'L', 'XL', 'XXL'],
     stock: { S: 0, M: 0, L: 2, XL: 6, XXL: 6 },
     sizeChart: 'set',
-    gallery: ['set-olive', 'set-olive--detail'],
+    gallery: ['set-olive', 'set-olive--closeup'],
     care: CARE,
   },
   {
@@ -273,7 +277,7 @@ export const PRODUCTS = [
     sizes: ['S', 'M', 'L', 'XL', 'XXL'],
     stock: { S: 0, M: 6, L: 6, XL: 6, XXL: 0 },
     sizeChart: 'set',
-    gallery: ['set-slate', 'set-slate--detail'],
+    gallery: ['set-slate', 'set-slate--closeup'],
     care: CARE,
   },
 ];
@@ -329,7 +333,7 @@ export const EDITORIAL = [
     kicker: 'کالکشن تابستان',
     title: 'بافت‌هایی که\nنور را می‌گیرند',
     body: 'ژاکاردهای این فصل از دور ساده‌اند و از نزدیک پر جزئیات. طرح روی پارچه بافته شده، نه چاپ‌شده — برای همین با شست‌وشو نمی‌رود.',
-    image: 'polo-jade--detail',
+    image: 'ed-portrait--wide',
     cta: { label: 'دیدن بافت‌ها', href: '#/shop?cat=knit' },
   },
   {
@@ -337,7 +341,7 @@ export const EDITORIAL = [
     kicker: 'ست‌های کامل',
     title: 'یک انتخاب،\nکل استایل',
     body: 'ست‌های بالا و پایین که از قبل با هم هماهنگ شده‌اند. صبح‌ها دیگر لازم نیست فکر کنید چه چیزی به چه چیزی می‌آید.',
-    image: 'set-cacao--detail',
+    image: 'ed-atelier--wide',
     cta: { label: 'دیدن ست‌ها', href: '#/shop?cat=set' },
   },
 ];

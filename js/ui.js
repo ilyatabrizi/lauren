@@ -92,10 +92,17 @@ export function toast(msg, icon = 'check') {
 
 /* ------------------------------------------------------------ blur-up ---- */
 /** <img> that fades in over its own tiny base64 preview. */
+/** One place that knows where a photograph lives. A bare key means the
+ *  catalogue rendition; anything already carrying a `--size` suffix is taken
+ *  as written, so a caller can ask for `--detail`, `--wide` or `--hero`. */
+export const photoUrl = (key) =>
+  `assets/photos/${String(key).includes('--') ? key : key + '--card'}.jpg`;
+
 export function photo(key, alt, { sizes = '', cls = '', eager = false } = {}) {
-  const ph = LQIP[key] || '';
+  const k = String(key).includes('--') ? key : `${key}--card`;
+  const ph = LQIP[k] || '';
   return `<div class="ph ${cls}" style="background-image:url(${ph});width:100%;height:100%">
-    <img src="assets/products/${key}.jpg" alt="${esc(alt)}"
+    <img src="${photoUrl(key)}" alt="${esc(alt)}"
          ${eager ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async"
          ${sizes ? `sizes="${sizes}"` : ''} onload="this.classList.add('ready')">
   </div>`;
@@ -126,7 +133,7 @@ export function productCard(p, { eager = false } = {}) {
     <a class="card__well" href="#/p/${p.id}" aria-label="${esc(p.title)} — ${esc(p.colorName)}">
       <div class="card__img">
         ${photo(p.gallery[0], `${p.title} ${p.colorName}`, { eager, sizes: '(max-width:759px) 45vw, (max-width:1159px) 30vw, 22vw' })}
-        ${alt ? `<img class="alt" src="assets/products/${alt}.jpg" alt="" loading="lazy" decoding="async">` : ''}
+        ${alt ? `<img class="alt" src="${photoUrl(alt)}" alt="" loading="lazy" decoding="async">` : ''}
       </div>
       <div class="card__tags">
         ${t ? `<span class="${t.cls}">${t.text}</span>` : ''}
@@ -135,7 +142,7 @@ export function productCard(p, { eager = false } = {}) {
     <button class="card__fav ${inWish(p.id) ? 'is-on' : ''}" data-fav="${p.id}"
             aria-label="افزودن به علاقه‌مندی‌ها" aria-pressed="${inWish(p.id)}">${ICON.heart}</button>
     <a class="card__body" href="#/p/${p.id}">
-      <span class="card__ref">لارن <span class="num">${esc(p.ref)}</span></span>
+      <span class="card__ref">Lauren ${esc(p.ref)}</span>
       <h3 class="card__title">${esc(p.title)}</h3>
       <span class="card__meta">${esc(p.colorName)}</span>
       ${(() => {

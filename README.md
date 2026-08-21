@@ -8,25 +8,55 @@ dependencies, no external requests. Everything runs in the browser.
 
 ## The design, in three rules
 
-**ویترین — a lit display case, not a dark lookbook.**
+**شب — a dark room with the clothes lit.**
 
-1. **Every photograph sits in a white vitrine well with a mount margin, and is
-   never displayed large.** The store's photography is ~740px phone-grade,
-   soft when enlarged. Framed small on a light ground it reads as something
-   under glass. `.pdp__shot` caps at 560px, editorial images at 440px, and
-   `build_assets.py` never upscales past a crop's native resolution.
-   **There is no photograph in the hero at all** — it is the LAUREN chevron,
-   traced to vector, drawn as a hairline outline at architectural scale.
-2. **One angle.** The mark's legs are exactly 45° and its apex exactly 90°
-   (measured off the master art). Every chamfer on the site is that same cut.
-3. **One accent — `#C2410C`.** Sampled from the shop's own photographs, where
-   92% of the saturated colour sits in the orange band: the hangers, the
-   hand-sewn buttons, the brass rails. About three uses per screen.
+1. **The photograph is the page.** Full bleed, edge to edge, no frame, no mount,
+   no white well. Type sits on the image or directly beneath it. Nothing is
+   capped at 400px any more — and that single change is what the whole redesign
+   rests on. v2 was light, small-image and photo-free in the hero *because* the
+   only pictures were ~740px phone grabs that fell apart when enlarged. Give the
+   page real frames and the argument for hiding them disappears.
 
-Persian never receives letter-spacing — it breaks Arabic-script joining.
-Tracking is a Latin-only lever, which is what `.lat` is for.
-The whole palette is checked against WCAG: no text below 4.5:1, no control
-boundary below 3:1.
+2. **Two voices, and they never blur.** A display voice — Persian, large, heavy,
+   tight-leaded, and *never tracked* — against a label voice: Latin monospace,
+   uppercase, positively tracked, for every number, size, price, piece number
+   and nav item. The mono is what makes the page read as equipment rather than
+   a brochure, and it is the part that was missing before: Latin and Persian
+   used to be set in the same family at the same weight, so nothing had a
+   hierarchy. Persian never takes the mono and never takes the tracking; its
+   label voice is weight and colour instead (`.eyebrow`), because Persian has
+   no uppercase and letter-spacing breaks its joins in both directions.
+
+3. **One accent, and it means "now".** `#FF6B35` marks the live thing — the
+   selected tab, the price about to be paid, the size still in stock. Never
+   decoration. On this ground it measures 6.3:1, so unlike v2's `#C2410C` it is
+   finally legal for small text as well as fills.
+
+The simulated bank gateway stays light on purpose: real Iranian PSP pages are
+light, and a dark one would be the least convincing thing on the site.
+
+---
+
+## The photography is placeholder — read this before showing anyone
+
+Every image in `assets/photos/` is a **free stock photograph from Pexels**,
+pulled by `scripts/fetch_photos.py`. **They are not Lauren's garments.** They
+are here so the design can be judged with real frames instead of phone grabs.
+
+The Pexels License permits commercial use without attribution, so nothing is
+being infringed — but a shopper looking at «پولوشرت پیکه نواردوزی ۳٬۴۵۰٬۰۰۰
+تومان» over a stranger's polo shirt is being shown a garment the shop does not
+sell. That is fine for a direction preview and **not** fine for a live shop.
+Replace all sixteen with a real shoot before this takes a real order.
+
+The sixteen frames are graded to a common look on the way in — desaturated,
+flattened slightly, settled on a cool lifted black. Sixteen photographers'
+grades side by side is what makes a stock grid look bought; one grade is what
+makes it look art-directed. `grade()` in `fetch_photos.py` is that pass, and a
+real shoot should go through it too.
+
+Each garment gets two views from one frame: the full shot and a `--closeup`,
+cropped in on the cloth. A real shoot would supply three or four.
 
 ---
 
@@ -42,7 +72,7 @@ boundary below 3:1.
 | **Account** | Phone + 4-box OTP, credit wallet with a ledger, orders, wishlist, address |
 | **Wallet** | Toman credit back on every order, 3 tiers by 12-month spend, redeemable at checkout |
 | **PWA** | Installs to the home screen, works offline, app shortcuts, maskable icons |
-| **Navigation** | Frosted-glass top bar, floating glass tab pill with a spring indicator, Back dismisses overlays |
+| **Navigation** | Dark frosted top bar, floating glass tab pill with a spring indicator, Back dismisses overlays |
 | **Search** | Its own route, matches Persian name / colour / fabric / piece number, tolerant of ی-ي and ک-ك |
 | **Orders** | Order detail + receipt, derived delivery stages, reorder, cancel, exchange request |
 | **Pickup** | Collect at Atlas as a real checkout option — skips the address it doesn't need |

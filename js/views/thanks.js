@@ -9,7 +9,7 @@
 
 import { SHOP, BRAND, PREVIEW } from '../config.js';
 import { state } from '../store.js';
-import { ICON, reveal, toast } from '../ui.js';
+import { ICON, reveal, toast, photoUrl,} from '../ui.js';
 import { toman, esc, faDateTime, $ } from '../util.js';
 import { go } from '../router.js';
 import { steps } from './checkout.js';
@@ -78,7 +78,7 @@ export default function thanks(ctx) {
       <div class="minilines" style="max-height:none">
         ${o.items.map((i) => `
           <div class="miniline">
-            <img src="assets/products/${i.img}.jpg" alt="" loading="lazy">
+            <img src="${photoUrl(i.img)}" alt="" loading="lazy">
             <div>${esc(i.title)}<span>${esc(i.color)} · سایز <bdi class="lat">${esc(i.size)}</bdi>${
               i.qty > 1 ? ` — <bdi class="num">${i.qty}</bdi> عدد` : ''}</span></div>
             <b style="font-weight:500;white-space:nowrap">${toman(i.price * i.qty)}</b>

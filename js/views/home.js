@@ -1,9 +1,9 @@
 // LAUREN — home.
 //
-// No photograph anywhere above the fold. The first screen is the mark itself,
-// drawn as a hairline outline at architectural scale with its apex aimed at the
-// primary button — pure vector, so it is sharp on any display, which the
-// store's 740px phone photography is not.
+// The first screen is a photograph, full bleed, with the type sitting on it.
+// v2 refused to do this because the only pictures were 740px phone grabs and
+// they fell apart at that size; with real frames the picture is the strongest
+// thing on the page, so it leads.
 
 import { BRAND, SHOP } from '../config.js';
 import { PRODUCTS, CATEGORIES, EDITORIAL } from '../data.js';
@@ -24,16 +24,20 @@ const catTile = (c, img, i) => `
     </div>
   </a>`;
 
-const edBlock = (e, flip) => `
-  <div class="ed ${flip ? 'ed--flip' : ''}">
-    <div class="rv"><div class="vit">
-      <div class="vit__img">${photo(e.image, e.title.replace('\n', ' '), { sizes: '(max-width:899px) 90vw, 44vw' })}</div>
-    </div></div>
+const edBlock = (e) => `
+  <div class="ed">
+    <div class="ed__media rv">
+      ${photo(e.image, e.title.replace('\n', ' '), { sizes: '100vw' })}
+    </div>
     <div class="ed__body rv rv-d1">
-      <span class="eyebrow">${esc(e.kicker)}</span>
-      <h2 class="t-h1" style="margin-block-start:var(--s3)">${esc(e.title)}</h2>
-      <p class="t-lede">${esc(e.body)}</p>
-      <a class="btn btn--ghost" href="${e.cta.href}">${esc(e.cta.label)}</a>
+      <div>
+        <div class="kicker"><span class="eyebrow">${esc(e.kicker)}</span></div>
+        <h2 class="t-h1">${esc(e.title)}</h2>
+      </div>
+      <div>
+        <p class="t-lede">${esc(e.body)}</p>
+        <a class="btn btn--ghost" href="${e.cta.href}">${esc(e.cta.label)}</a>
+      </div>
     </div>
   </div>`;
 
@@ -44,9 +48,11 @@ export default function home() {
 
   const html = `
   <section class="hero">
-    <div class="hero__mark" aria-hidden="true">${markSvg({ fill: false, label: '' })}</div>
+    <div class="hero__media" aria-hidden="true">
+      <img src="assets/photos/hero--hero.jpg" alt="" fetchpriority="high" decoding="async">
+    </div>
     <div class="hero__in wrap">
-      <span class="label">Tabriz · Since ’۱۴۰۰</span>
+      <span class="mono mono--on">Tabriz — Est. 1400</span>
       <h1 class="t-display">لباسِ ماندگار،<br>استایلِ بی‌پایان</h1>
       <p class="hero__sub t-lede">
         دوازده قطعه‌ی انتخاب‌شده از بهترین دوخت‌های ترکیه. کم، اما درست —
@@ -61,7 +67,7 @@ export default function home() {
         <span>ارسال رایگان بالای ${tomanRound(SHOP.freeShippingOver)}</span>
         <span>تعویض سایز تا ۷ روز</span>
         <span>بازگشت ${memberRate}٪ اعتبار</span>
-        <span class="lat">${BRAND.followers} FOLLOWERS</span>
+        <span class="mono">${BRAND.followers} followers</span>
       </div>
     </div>
   </section>
@@ -69,7 +75,8 @@ export default function home() {
   <section class="sec wrap">
     <div class="sec__head">
       <div>
-        <span class="eyebrow">تازه رسیده‌ها</span>
+        <div class="kicker"><span class="eyebrow">تازه رسیده‌ها</span>
+          <span class="mono">New in</span></div>
         <h2 class="t-h1">آخرین اضافه‌های این هفته</h2>
       </div>
       <a class="link" href="#/shop">همه‌ی دوازده قطعه ${ICON.back}</a>
@@ -79,12 +86,13 @@ export default function home() {
     </div>
   </section>
 
-  <section class="sec sec--tight wrap">${edBlock(EDITORIAL[0], false)}</section>
+  <section class="sec sec--tight wrap">${edBlock(EDITORIAL[0])}</section>
 
   <section class="sec wrap">
     <div class="sec__head">
       <div>
-        <span class="eyebrow">دسته‌بندی</span>
+        <div class="kicker"><span class="eyebrow">دسته‌بندی</span>
+          <span class="mono">Categories</span></div>
         <h2 class="t-h1">از کجا شروع کنیم؟</h2>
       </div>
     </div>
@@ -96,7 +104,7 @@ export default function home() {
     </div>
   </section>
 
-  <section class="sec sec--tight wrap">${edBlock(EDITORIAL[1], true)}</section>
+  <section class="sec sec--tight wrap">${edBlock(EDITORIAL[1])}</section>
 
   <section class="sec wrap">
     <div class="sec__head">

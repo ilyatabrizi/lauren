@@ -5,8 +5,7 @@ import { SHOP, BRAND, PREVIEW } from '../config.js';
 const SHOP_WA = BRAND.whatsapp;
 import {
   photo, productCard, bindCards, bindAccordions, accordion,
-  reveal, toast, ICON, lightbox, settleImages, sizeTables, field, stars,
-} from '../ui.js';
+  reveal, toast, ICON, lightbox, settleImages, sizeTables, field, stars, photoUrl,} from '../ui.js';
 import { toman, tomanRound, esc, faDate, $, $$ } from '../util.js';
 import {
   addToBag, inWish, toggleWish, markViewed, tier, notifyMe, isNotifying,
@@ -72,16 +71,20 @@ export default function product(ctx) {
 
     <div class="pdp">
       <div class="pdp__gal">
-        ${p.gallery.map((g, i) => `
-          <button class="pdp__shot vit" data-zoom="assets/products/${g}.jpg" aria-label="بزرگ‌نمایی تصویر">
-            <div class="vit__img">
-              ${photo(g, `${p.title} — ${p.colorName}`, { eager: i === 0, sizes: '(max-width:939px) 92vw, 46vw' })}
+        ${p.gallery.map((g, i) => {
+          // a bare key names the garment (so ask for its big rendition); a key
+          // that already carries a suffix names a second VIEW of it
+          const key = g.includes('--') ? g : `${g}--detail`;
+          return `
+          <button class="pdp__shot vit" data-zoom="${photoUrl(key)}" aria-label="بزرگ‌نمایی تصویر">
+            <div class="vit__img${g.includes('--closeup') ? ' vit__img--sq' : ''}">
+              ${photo(key, `${p.title} — ${p.colorName}`, { eager: i === 0, sizes: '(max-width:939px) 100vw, 58vw' })}
             </div>
-          </button>`).join('')}
+          </button>`; }).join('')}
       </div>
 
       <div class="pdp__info">
-        <div class="pdp__ref">لارن <span class="num">${esc(p.ref)}</span></div>
+        <div class="pdp__ref">Lauren ${esc(p.ref)}</div>
         <h1>${esc(p.title)}</h1>
         <div class="pdp__latin label">${esc(p.latin)}</div>
 

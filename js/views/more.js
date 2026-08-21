@@ -8,8 +8,7 @@ import {
   requestExchange, reorder, myReview, forgetNotify,
 } from '../store.js';
 import {
-  ICON, productCard, bindCards, reveal, settleImages, field, fieldError, toast, sizeTables,
-} from '../ui.js';
+  ICON, productCard, bindCards, reveal, settleImages, field, fieldError, toast, sizeTables, photoUrl,} from '../ui.js';
 import { toman, tomanRound, esc, faDate, faDateTime, $, $$ } from '../util.js';
 import { go, refresh } from '../router.js';
 
@@ -176,7 +175,7 @@ export function track(ctx) {
         </div>
 
         <div class="order__thumbs" style="margin-block-start:var(--s5)">
-          ${order.items.map((i) => `<span><img src="assets/products/${i.img}.jpg" alt="${esc(i.title)}" loading="lazy"></span>`).join('')}
+          ${order.items.map((i) => `<span><img src="${photoUrl(i.img)}" alt="${esc(i.title)}" loading="lazy"></span>`).join('')}
         </div>
 
         <p class="t-fine" style="margin-block-start:var(--s5)">
@@ -397,7 +396,7 @@ export function orderDetail(ctx) {
         ${o.items.map((i) => `
           <div class="miniline">
             <a class="miniline__img" href="#/p/${i.id}">
-              <img src="assets/products/${i.img}.jpg" alt="${esc(i.title)}" loading="lazy">
+              <img src="${photoUrl(i.img)}" alt="${esc(i.title)}" loading="lazy">
             </a>
             <div>
               <a href="#/p/${i.id}">${esc(i.title)}</a>
@@ -461,7 +460,7 @@ export function orderDetail(ctx) {
           return `
           <div class="miniline">
             <a class="miniline__img" href="#/p/${i.id}">
-              <img src="assets/products/${i.img}.jpg" alt="${esc(i.title)}" loading="lazy">
+              <img src="${photoUrl(i.img)}" alt="${esc(i.title)}" loading="lazy">
             </a>
             <div>
               <a href="#/p/${i.id}">${esc(i.title)}</a>

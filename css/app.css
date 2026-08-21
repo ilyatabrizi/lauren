@@ -1,18 +1,31 @@
 /* ==========================================================================
-   LAUREN — ویترین
-   A lit display case, not a dark lookbook.
+   LAUREN — شب  (v5)
+   A dark room with the clothes lit. The opposite of v2's vitrine, and it is
+   the photography that changed the argument: v2 stayed light, small and
+   photo-free because the source images were 740px phone grabs. With real
+   frames the pictures can carry the page, so they do.
 
-   Three rules hold the whole thing together:
-     1. Every photograph sits in a white vitrine well with a mount margin, and
-        is never displayed large. The photography is soft phone-grade; framed
-        small it reads as something under glass, enlarged it reads as a bad file.
-     2. One angle. The LAUREN mark's legs are exactly 45°, its apex exactly 90°.
-        Every chamfer, caret, notch and divider on the site is that same cut.
-     3. One accent. #C2410C — the orange already in their store, on the hangers,
-        the button stitching and the brass rails. Roughly three uses per screen.
+   Three rules hold it together:
 
-   Persian never gets letter-spacing: it breaks Arabic-script joining.
-   Tracking is applied only to Latin runs, which is why .lat exists.
+     1. THE PHOTOGRAPH IS THE PAGE. Full-bleed, edge to edge, no frame, no
+        mount, no well. Type sits ON the image or directly under it. Nothing
+        is capped at 400px any more.
+
+     2. TWO VOICES, AND THEY NEVER BLUR. A display voice — Persian, huge,
+        tight-leaded, no tracking ever — and a label voice: Latin small-caps
+        MONOSPACE, tracked, for numbers, sizes, prices, SKUs and nav. The mono
+        is what makes it read as equipment rather than a brochure. Persian
+        never takes the mono and never takes the tracking; its label voice is
+        weight and colour instead. This split is the whole typographic idea.
+
+     3. ONE ACCENT, AND IT MEANS "NOW". #FF6B35 marks the live thing — the
+        selected tab, the price you are about to pay, the size in stock. Never
+        decoration. On this ground it clears 6.3:1, so unlike v2 it may finally
+        be used for small text.
+
+   Persian never gets letter-spacing, positive or negative: it breaks
+   Arabic-script joining. Tracking is a Latin-only lever — that is what .mono
+   and .lat are for.
    ========================================================================== */
 
 /* ---------------------------------------------------------------- fonts -- */
@@ -20,55 +33,58 @@
 @font-face { font-family: 'YekanX'; src: url('../assets/fonts/IRANYekanXFaNum-Regular.woff2') format('woff2');  font-weight: 400; font-display: swap; }
 @font-face { font-family: 'YekanX'; src: url('../assets/fonts/IRANYekanXFaNum-Medium.woff2') format('woff2');   font-weight: 500; font-display: swap; }
 @font-face { font-family: 'YekanX'; src: url('../assets/fonts/IRANYekanXFaNum-DemiBold.woff2') format('woff2'); font-weight: 600; font-display: swap; }
+@font-face { font-family: 'YekanX'; src: url('../assets/fonts/IRANYekanXFaNum-Bold.woff2') format('woff2');     font-weight: 700; font-display: swap; }
+@font-face { font-family: 'YekanX'; src: url('../assets/fonts/IRANYekanXFaNum-Black.woff2') format('woff2');    font-weight: 900; font-display: swap; }
 @font-face { font-family: 'YekanLat'; src: url('../assets/fonts/IRANYekanX-Regular.woff2') format('woff2');  font-weight: 400; font-display: swap; }
 @font-face { font-family: 'YekanLat'; src: url('../assets/fonts/IRANYekanX-Medium.woff2') format('woff2');   font-weight: 500; font-display: swap; }
 @font-face { font-family: 'YekanLat'; src: url('../assets/fonts/IRANYekanX-DemiBold.woff2') format('woff2'); font-weight: 600; font-display: swap; }
 
 /* --------------------------------------------------------------- tokens -- */
 :root {
-  /* ground */
-  --paper:    #EFEEE9;   /* warm-neutral plaster, faint olive cast — not cream */
-  --paper-2:  #E7E6DF;   /* recessed: zebra rows, inset wells, disabled */
-  --vitrine:  #FFFFFF;   /* every product well, panel, card, input */
-  --pine:     #16352C;   /* inverted bands only — from the store's marble */
-  
+  /* ground — measured against --paper #0D0D0F */
+  --paper:    #0D0D0F;   /* the room */
+  --paper-2:  #16161A;   /* recessed: rows, wells, disabled */
+  --vitrine:  #131317;   /* a card, barely lifted off the ground */
+  --pine:     #F2F1EC;   /* the INVERTED band is now the light one */
+
   /* ink */
-  --ink:      #16181C;   /* 15.3:1 on paper */
-  --muted:    #5C6067;   /*  5.4:1 on paper — safe down to 12px */
-  --rule:     #D6D5CD;   /*  decoration only: seams, gutters, card frames    */
-  --edge:     #86857C;   /*  3.7:1 on white, 3.2:1 on paper — every INTERACTIVE
-                             boundary. --rule managed only 1.8:1 there, which
-                             fails WCAG 1.4.11 and left inputs looking edgeless. */
+  --ink:      #F5F5F2;   /* 17.4:1 */
+  --muted:    #9A9AA2;   /*  6.6:1 — safe to 12px */
+  --rule:     #26262C;   /*  hairlines and seams. Decoration only. */
+  --edge:     #6B6B78;   /*  3.5:1 — every INTERACTIVE boundary */
 
-  /* The one accent. Measured: 4.46:1 on paper — a hair under the 4.5 floor,
-     so --thread is for fills, rules and >=24px display only. Any orange text
-     below that uses --thread-d at 6.3:1. On --pine it is 2.57:1, i.e. banned. */
-  --thread:   #C2410C;
-  --thread-d: #9A340A;
+  /* The accent. 6.3:1 on --paper, so on this ground it is finally legal for
+     small text as well as fills — the one real dividend of going dark. */
+  --thread:   #FF6B35;
+  --thread-d: #FF6B35;   /* same value: no darker variant is needed now */
+  --thread-q: #7A2E14;   /* quiet: the accent at rest, for rules and hovers */
 
-  --ok:       #14653A;
+  --ok:       #4ADE80;
 
-  /* spacing — a real scale, nothing between the steps */
+  /* spacing */
   --s1: 4px;  --s2: 8px;  --s3: 12px; --s4: 16px; --s5: 24px;
   --s6: 32px; --s7: 48px; --s8: 64px; --s9: 96px; --s10: 128px;
 
-  --pad:  clamp(20px, 5vw, 64px);
-  --maxw: 1440px;
+  --pad:  clamp(18px, 4.5vw, 56px);
+  --maxw: 1560px;
 
-  /* the 45° cut, taken off the mark itself */
-  --mitre: 14px;
+  /* the 45° cut, taken off the mark itself — kept from v2, used far less */
+  --mitre: 12px;
+
+  /* type ---------------------------------------------------------------- */
+  /* The label voice. A system monospace: no download, present everywhere, and
+     exactly the technical texture the display voice needs to push against.
+     LATIN AND NUMERALS ONLY — never put Persian in it. */
+  --mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, 'Cascadia Mono',
+          'Roboto Mono', monospace;
 
   --ease:  cubic-bezier(.2, .6, .3, 1);
   --ease-o: cubic-bezier(.16, 1, .3, 1);
 
-  /* viewport-fit=cover means the system bars sit ON the page in a standalone
-     PWA. Every fixed edge pays its own inset. */
   --sat: env(safe-area-inset-top, 0px);
   --sab: env(safe-area-inset-bottom, 0px);
-  --hdr-h: 60px;
+  --hdr-h: 54px;
   --top-h: calc(var(--sat) + var(--hdr-h));
-  /* the floating pill's height plus the gap under it — the space content
-     has to clear at the bottom of the viewport */
   --tab-h: calc(58px + 12px + var(--sab));
 }
 
@@ -136,55 +152,102 @@ a { color: inherit; text-decoration: none; }
 .mitre { clip-path: polygon(calc(100% - var(--mitre)) 0, 100% var(--mitre), 100% 100%, 0 100%, 0 0); }
 
 /* ------------------------------------------------------------------ type -- */
+/* THE DISPLAY VOICE — Persian, large, heavy, tight-leaded, and never tracked.
+   Persian carries a headline through weight and size, not through spacing;
+   negative tracking would fuse the joins and positive tracking would break
+   them, so display Persian sets letter-spacing to normal explicitly and the
+   tight optical feel comes from line-height instead. */
 .t-display {
-  font-size: clamp(32px, 7vw, 68px);
-  font-weight: 300; line-height: 1.14;
+  font-size: clamp(38px, 8.6vw, 104px);
+  font-weight: 700; line-height: 1.02; letter-spacing: normal;
+  text-wrap: balance;
 }
-.t-h1 { font-size: clamp(26px, 4.2vw, 40px); font-weight: 300; line-height: 1.24; }
-.t-h2 { font-size: clamp(20px, 2.6vw, 28px); font-weight: 400; line-height: 1.32; }
-.t-h3 { font-size: 17px; font-weight: 500; line-height: 1.5; }
-.t-body { font-size: 15px; line-height: 1.9; }
-.t-lede { font-size: clamp(15px, 1.4vw, 17px); line-height: 1.95; color: var(--muted); }
+.t-h1 { font-size: clamp(28px, 5vw, 56px); font-weight: 700; line-height: 1.08; letter-spacing: normal; }
+.t-h2 { font-size: clamp(22px, 3vw, 34px); font-weight: 600; line-height: 1.2;  letter-spacing: normal; }
+.t-h3 { font-size: 17px; font-weight: 600; line-height: 1.45; }
+.t-body { font-size: 15px; line-height: 1.85; }
+.t-lede { font-size: clamp(16px, 1.5vw, 20px); line-height: 1.7; color: var(--ink); font-weight: 300; }
 .t-small { font-size: 13px; line-height: 1.75; color: var(--muted); }
 .t-fine  { font-size: 12px; line-height: 1.7; color: var(--muted); }
 
-/* tracked Latin label — the only place tracking is allowed */
+/* Latin display gets what Persian cannot: real optical tightening. */
+.t-display .lat, .t-h1 .lat, .t-display.lat, .t-h1.lat { letter-spacing: -.02em; }
+
+/* THE LABEL VOICE — monospace, uppercase, tracked. LATIN AND DIGITS ONLY.
+   This is the counterweight that makes the display voice read as design
+   rather than as a big paragraph: everything technical about the shop — a
+   size, a price, a piece number, a nav item, a stage — is set in it. */
+.mono {
+  font-family: var(--mono);
+  direction: ltr; unicode-bidi: isolate;
+  font-size: 11px; font-weight: 500; letter-spacing: .1em;
+  text-transform: uppercase; font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+.mono--lg  { font-size: 13px; }
+.mono--ink { color: var(--ink); }
+.mono--on  { color: var(--thread); }
+
+/* .label is the old name for the same idea; keep it working and route it to
+   the mono so no view has to change to get the new voice. */
 .label {
-  font-family: 'YekanLat', sans-serif; direction: ltr; unicode-bidi: isolate;
-  font-size: 10.5px; font-weight: 500; letter-spacing: .22em;
+  font-family: var(--mono); direction: ltr; unicode-bidi: isolate;
+  font-size: 11px; font-weight: 500; letter-spacing: .1em;
   text-transform: uppercase; color: var(--muted);
 }
-.label--thread { color: var(--thread-d); }
+.label--thread { color: var(--thread); }
 
-/* Persian eyebrow — no tracking, weight and colour carry it instead */
-.eyebrow { font-size: 13px; font-weight: 500; color: var(--thread-d); }
+/* THE PERSIAN LABEL — the same job as .mono, done the only way Persian
+   allows: smaller, heavier, quieter. No tracking, no uppercase (there is no
+   such thing), no mono. */
+.eyebrow {
+  font-size: 12.5px; font-weight: 600; color: var(--thread);
+  letter-spacing: normal;
+}
+.eyebrow--quiet { color: var(--muted); }
+
+/* A Persian eyebrow and a Latin mono label side by side, separated by a rule —
+   the pairing that sets the tone at the head of every section. */
+.kicker {
+  display: flex; align-items: center; gap: var(--s3);
+  margin-block-end: var(--s4);
+}
+.kicker::after {
+  content: ''; flex: 1; height: 1px; background: var(--rule);
+}
 
 .num { font-family: 'YekanLat', sans-serif; direction: ltr; unicode-bidi: isolate;
        font-variant-numeric: tabular-nums; }
 
 /* --------------------------------------------------------------- buttons -- */
+/* Squared off. The v2 mitre was the mark's 45° cut applied to everything; at
+   this scale, against full-bleed photography, it read as fussy. One chamfer
+   survives, on the primary button only, so the shape rule is still stated
+   once per screen instead of ten times. */
 .btn {
   --bg: var(--ink); --fg: var(--paper); --bd: var(--ink);
   display: inline-flex; align-items: center; justify-content: center; gap: var(--s2);
-  min-height: 50px; padding-inline: var(--s5);
+  min-height: 52px; padding-inline: var(--s6);
   background: var(--bg); color: var(--fg);
   border: 1px solid var(--bd);
-  font-size: 14px; font-weight: 500;
+  font-size: 13px; font-weight: 600;
   cursor: pointer; user-select: none;
-  clip-path: polygon(calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%, 0 0);
   transition: background .24s var(--ease), color .24s var(--ease),
               border-color .24s var(--ease), opacity .2s;
 }
-.btn:hover { --bg: #000; --bd: #000; }
+.btn:hover { --bg: #fff; --bd: #fff; }
 .btn[disabled], .btn[aria-disabled='true'] { opacity: .38; pointer-events: none; }
 
+/* the one chamfer left on the site */
+.btn--lg { min-height: 58px; padding-inline: var(--s7); font-size: 14px;
+  clip-path: polygon(calc(100% - 12px) 0, 100% 12px, 100% 100%, 0 100%, 0 0); }
+
 .btn--ghost { --bg: transparent; --fg: var(--ink); --bd: var(--edge); }
-.btn--ghost:hover { --bg: transparent; --fg: var(--ink); --bd: var(--ink); }
-.btn--thread { --bg: var(--thread); --fg: #fff; --bd: var(--thread); }
-.btn--thread:hover { --bg: var(--thread-d); --bd: var(--thread-d); }
+.btn--ghost:hover { --bg: rgba(245,245,242,.08); --fg: var(--ink); --bd: var(--ink); }
+.btn--thread { --bg: var(--thread); --fg: #14060A; --bd: var(--thread); }
+.btn--thread:hover { --bg: #FF8659; --bd: #FF8659; }
+.btn--sm { min-height: 44px; padding-inline: var(--s4); font-size: 12px; }
 .btn--block { width: 100%; }
-.btn--sm { min-height: 40px; padding-inline: var(--s4); font-size: 13px; }
-.btn--lg { min-height: 56px; font-size: 15px; }
 
 .link {
   display: inline-flex; align-items: center; gap: var(--s2);
@@ -206,11 +269,12 @@ a { color: inherit; text-decoration: none; }
 .chip.is-on { background: var(--ink); border-color: var(--ink); color: var(--paper); }
 
 .tag {
-  display: inline-block; padding: 3px var(--s2);
+  display: inline-block; padding: 4px var(--s2);
   font-size: 10.5px; font-weight: 600; line-height: 1.5;
-  background: var(--ink); color: var(--paper);
+  background: var(--thread); color: #14060A;
 }
-.tag--quiet  { background: var(--paper-2); color: var(--muted); }
+.tag--sale { background: var(--ink); color: var(--paper); }
+.tag--quiet  { background: rgba(13,13,15,.72); color: var(--ink); backdrop-filter: blur(8px); }
 
 /* ----------------------------------------------------------------- seams -- */
 /* A divider is a rule plus a basting stitch — the site's one ornament. */
@@ -235,13 +299,13 @@ a { color: inherit; text-decoration: none; }
               -webkit-backdrop-filter .38s var(--ease), backdrop-filter .38s var(--ease);
 }
 .topbar.is-stuck {
-  background: rgba(239, 238, 233, .72);
-  border-block-end-color: rgba(22, 24, 28, .09);
+  background: rgba(13, 13, 15, .72);
+  border-block-end-color: rgba(245, 245, 242, .10);
   -webkit-backdrop-filter: blur(22px) saturate(180%);
   backdrop-filter: blur(22px) saturate(180%);
 }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .topbar.is-stuck { background: rgba(239, 238, 233, .97); }
+  .topbar.is-stuck { background: rgba(13, 13, 15, .97); }
 }
 
 .hdr { height: var(--hdr-h); display: flex; align-items: center; }
@@ -281,8 +345,9 @@ a { color: inherit; text-decoration: none; }
   position: absolute; inset-block-start: 3px; inset-inline-end: 2px;
   min-width: 16px; height: 16px; padding-inline: 4px;
   display: grid; place-items: center;
-  background: var(--thread); color: #fff;
-  font-size: 10px; font-weight: 600; line-height: 1;
+  background: var(--thread); color: #14060A;   /* the accent is light: its text is dark */
+  font-size: 10px; font-weight: 700; line-height: 1;
+  font-variant-numeric: tabular-nums;
   transform: scale(0); transition: transform .3s var(--ease-o);
 }
 .iconbtn__n.is-on { transform: scale(1); }
@@ -292,7 +357,7 @@ a { color: inherit; text-decoration: none; }
 
 /* ============================================================== layout === */
 main { min-height: 60vh; }
-.sec { padding-block: clamp(48px, 7vw, 104px); }
+.sec { padding-block: clamp(56px, 9vw, 148px); }
 .sec--tight { padding-block: clamp(32px, 4.5vw, 64px); }
 .sec__head {
   display: flex; align-items: flex-end; justify-content: space-between;
@@ -305,67 +370,61 @@ main { min-height: 60vh; }
 [id] { scroll-margin-block-start: calc(var(--top-h) + var(--s4)); }
 
 /* ================================================================ hero === */
+/* ================================================================ hero === */
+/* Full-bleed, full-height, type sitting ON the photograph. The old hero was a
+   vector chevron on paper because the photography could not take the weight;
+   this one is the photograph. */
 .hero {
   position: relative;
-  padding-block: calc(var(--top-h) + clamp(40px, 7vh, 88px)) 0;
+  min-height: min(94svh, 900px);
+  display: grid; align-items: end;
+  padding-block: calc(var(--top-h) + var(--s8)) clamp(40px, 8vh, 96px);
   overflow: hidden;
+  isolation: isolate;
+}
+.hero__media { position: absolute; inset: 0; z-index: -2; }
+/* RTL: the copy starts at the right, so the subject is pushed left of centre
+   and the headline lands on rock instead of on a face. */
+.hero__media img { width: 100%; height: 100%; object-fit: cover; object-position: 74% 50%; }
+@media (max-width: 900px) { .hero__media img { object-position: 62% 50%; } }
+/* The scrim is what makes white type legible on any frame. Two stops, weighted
+   to the bottom where the copy sits, so the top of the picture stays open. */
+.hero::after {
+  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    linear-gradient(to top, var(--paper) 0%, rgba(13,13,15,.86) 26%,
+                    rgba(13,13,15,.34) 58%, rgba(13,13,15,.55) 100%);
 }
 .hero__in { position: relative; z-index: 2; }
-.hero h1 { max-width: 15ch; margin-block-start: var(--s4); }
-.hero__sub { max-width: 42ch; margin-block-start: var(--s5); }
+.hero h1 { max-width: 11ch; margin-block-start: var(--s4); }
+.hero__sub { max-width: 44ch; margin-block-start: var(--s5); color: rgba(245,245,242,.82); }
 .hero__cta { display: flex; gap: var(--s3); margin-block-start: var(--s6); flex-wrap: wrap; }
 
-/* The mark at architectural scale, cropped by the viewport, apex aimed at the
-   CTA. Pure vector — the one thing on this page guaranteed sharp anywhere. */
-.hero__mark {
-  position: absolute; z-index: 1; pointer-events: none;
-  inset-inline-end: -14%; inset-block-start: 4%;
-  width: min(78vw, 760px); color: var(--edge);
-}
-@media (max-width: 900px) {
-  /* On a phone the copy owns the screen; the mark drops behind it, larger and
-     fainter, so it reads as a watermark rather than a stray line. */
-  .hero__mark {
-    inset-inline-end: -30%; inset-block-start: 12%;
-    width: 128vw; color: var(--rule);
-  }
-}
-.hero__mark svg { width: 100%; height: auto; overflow: visible; }
-.hero__mark path {
-  fill: none; stroke: currentColor; stroke-width: 1.25;
-  vector-effect: non-scaling-stroke;
-}
-.hero__mark .fill { fill: var(--rule); stroke: none; opacity: .34; }
-
-@media (prefers-reduced-motion: no-preference) {
-  .hero__mark path:not(.fill) {
-    stroke-dasharray: var(--len, 4000); stroke-dashoffset: var(--len, 4000);
-    animation: draw 2.4s var(--ease-o) .25s forwards;
-  }
-  @keyframes draw { to { stroke-dashoffset: 0; } }
-}
-
+/* the four promises, set as a mono strip along the bottom of the picture */
 .hero__foot {
   position: relative; z-index: 2;
-  margin-block-start: clamp(40px, 7vh, 88px);
-  padding-block: var(--s4);
-  border-block-start: 1px solid var(--rule);
-  display: grid; gap: var(--s2) var(--s5);
+  margin-block-start: clamp(32px, 6vh, 72px);
+  padding-block-start: var(--s4);
+  border-block-start: 1px solid rgba(245,245,242,.18);
+  display: grid; gap: var(--s3) var(--s5);
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 @media (min-width: 760px) { .hero__foot { grid-template-columns: repeat(4, auto); justify-content: space-between; } }
+.hero__foot > * { color: rgba(245,245,242,.78); }
 
-/* ============================================================== vitrine == */
-/* Every photograph on the site lives in one of these: a white well with a
-   mount margin. It is the reason the soft photography holds up. */
-.vit {
-  position: relative; background: var(--vitrine);
-  border: 1px solid var(--rule);
-  padding: var(--s3);
-  overflow: hidden;
-}
+/* ============================================================== picture == */
+/* There is no vitrine any more. A photograph is a photograph: it fills its
+   box, edge to edge, and the only thing around it is the page. */
+.vit { position: relative; overflow: hidden; background: var(--paper-2); }
 .vit__img { position: relative; aspect-ratio: 4 / 5; overflow: hidden; background: var(--paper-2); }
+.vit__img--sq { aspect-ratio: 1 / 1; }
 .vit__img img { width: 100%; height: 100%; object-fit: cover; }
+
+/* a full-bleed band that escapes .wrap */
+.bleed {
+  width: 100vw; margin-inline: calc(50% - 50vw);
+  position: relative; overflow: hidden;
+}
 
 /* ================================================================ card === */
 .grid {
@@ -376,18 +435,15 @@ main { min-height: 60vh; }
 @media (min-width: 1160px) { .grid { grid-template-columns: repeat(4, 1fr); } }
 
 .card { position: relative; display: block; }
-.card__well {
-  position: relative; display: block;
-  background: var(--vitrine); border: 1px solid var(--rule);
-  padding: var(--s3);
-  transition: border-color .26s var(--ease);
-}
-.card:hover .card__well { border-color: var(--edge); }
-.card__img { position: relative; aspect-ratio: 4 / 5; overflow: hidden; background: var(--paper-2); }
+/* No frame, no mount, no padding. The photograph is the tile; the label sits
+   under it in the mono voice, the way a rail tag sits under a garment. */
+.card__well { position: relative; display: block; background: var(--paper-2); overflow: hidden; }
+.card__img { position: relative; aspect-ratio: 4 / 5; overflow: hidden; }
 .card__img img {
   width: 100%; height: 100%; object-fit: cover;
-  transition: opacity .5s ease, transform .9s var(--ease-o);
+  transition: opacity .5s ease, transform 1.1s var(--ease-o);
 }
+.card:hover .card__img img { transform: scale(1.035); }
 .card__img img.alt { position: absolute; inset: 0; opacity: 0; }
 .card:hover .card__img img.alt { opacity: 1; }
 
@@ -396,24 +452,34 @@ main { min-height: 60vh; }
   display: flex; flex-direction: column; align-items: flex-start; gap: var(--s1);
 }
 .card__fav {
-  position: absolute; inset-block-start: var(--s3); inset-inline-end: var(--s3); z-index: 2;
-  width: 34px; height: 34px; display: grid; place-items: center;
-  background: rgba(255,255,255,.92); color: var(--ink);
+  position: absolute; inset-block-start: var(--s2); inset-inline-end: var(--s2); z-index: 2;
+  width: 44px; height: 44px; display: grid; place-items: center;   /* 44 = the tap floor */
+  background: rgba(13,13,15,.55); backdrop-filter: blur(10px); color: var(--ink);
   opacity: 0; transform: translateY(-3px);
   transition: opacity .24s var(--ease), transform .24s var(--ease), color .2s;
 }
 .card:hover .card__fav, .card__fav.is-on, .card__fav:focus-visible { opacity: 1; transform: none; }
-.card__fav svg { width: 16px; height: 16px; stroke-width: 1.6; }
+.card__fav svg { width: 17px; height: 17px; stroke-width: 1.6; }
 .card__fav.is-on { color: var(--thread); }
 .card__fav.is-on svg { fill: var(--thread); }
 @media (hover: none) { .card__fav { opacity: 1; transform: none; } }
 
-.card__body { padding-block-start: var(--s3); display: grid; gap: 2px; }
-.card__ref { font-size: 11px; color: var(--muted); }
-.card__title { font-size: 14.5px; font-weight: 500; line-height: 1.5; }
+.card__body {
+  padding-block-start: var(--s3); display: grid; gap: 3px;
+  border-block-start: 1px solid var(--rule); margin-block-start: var(--s3);
+}
+/* the piece number is a spec, so it is set as one */
+.card__ref {
+  font-family: var(--mono); direction: ltr; unicode-bidi: isolate;
+  font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted);
+}
+.card__title { font-size: 15px; font-weight: 500; line-height: 1.45; }
 .card__meta { font-size: 12.5px; color: var(--muted); }
-.card__price { display: flex; align-items: baseline; gap: var(--s2); margin-block-start: var(--s1); font-size: 14px; font-weight: 500; }
-.card__was { font-size: 12px; color: var(--muted); text-decoration: line-through; font-weight: 400; }
+.card__price {
+  display: flex; align-items: baseline; gap: var(--s2); margin-block-start: var(--s2);
+  font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums;
+}
+.card__was { font-size: 12px; color: var(--muted); text-decoration: line-through; }
 /* A markdown reads as a struck price, never as a filled percentage pill —
    clearance language is wrong at a 3.4M–8.9M Toman band, and it collided
    with the error colour. */
@@ -424,21 +490,27 @@ main { min-height: 60vh; }
 .ph > img.ready { opacity: 1; }
 
 /* ============================================================ editorial == */
-.ed { display: grid; gap: clamp(24px, 4vw, 56px); align-items: center; grid-template-columns: 1fr; }
-@media (min-width: 900px) { .ed { grid-template-columns: 1fr 1fr; } }
-.ed--flip > :first-child { order: 2; }
-.ed__body { max-width: 46ch; }
-/* Hard ceiling on displayed photography — past this the source softness shows. */
-.ed .vit { max-width: 440px; }
-@media (min-width: 900px) { .ed .vit { margin-inline-start: auto; } }
-.ed--flip .vit { margin-inline: 0 auto; }
-.ed__body p { margin-block: var(--s4) var(--s6); }
-.ed h2 { white-space: pre-line; }
+/* An editorial band: one wide photograph running the full width of the
+   viewport, the copy set beneath it rather than beside it. Beside-it columns
+   are what made v2 look like a brochure. */
+.ed { display: grid; gap: var(--s6); }
+.ed__media { position: relative; aspect-ratio: 16 / 9; overflow: hidden; background: var(--paper-2); }
+.ed__media img { width: 100%; height: 100%; object-fit: cover; }
+.ed__body { max-width: 56ch; }
+.ed__body h2 { margin-block: var(--s3) var(--s4); white-space: pre-line; }
+.ed__body .btn { margin-block-start: var(--s5); }
+@media (min-width: 900px) {
+  .ed { grid-template-columns: 1fr; }
+  .ed__body { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s7);
+              max-width: none; align-items: start; }
+  .ed__body h2 { margin-block-start: 0; }
+}
+
 
 /* ================================================================ shop === */
 .shopbar {
   position: sticky; inset-block-start: var(--top-h); z-index: 40;
-  background: rgba(239, 238, 233, .82);
+  background: rgba(13, 13, 15, .84);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   backdrop-filter: blur(20px) saturate(180%);
   border-block-end: 1px solid var(--rule);
@@ -482,23 +554,26 @@ main { min-height: 60vh; }
 
 /* ============================================================= product === */
 .pdp { display: grid; gap: clamp(24px, 4vw, 56px); grid-template-columns: 1fr; }
-@media (min-width: 940px) { .pdp { grid-template-columns: minmax(0, 1fr) minmax(340px, 460px); align-items: start; } }
-.pdp__gal { display: grid; gap: var(--s3); grid-template-columns: 1fr; }
-@media (min-width: 620px) { .pdp__gal { grid-template-columns: 1fr 1fr; } }
-/* Never enlarge the photography past the point where its softness shows: the
-   crops are ~560px native, so two-up at ~380px keeps every shot inside the
-   detail the file actually holds. */
-.pdp__shot { max-width: 400px; width: 100%; cursor: zoom-in; }
+@media (min-width: 940px) { .pdp { grid-template-columns: minmax(0, 1.35fr) minmax(360px, 460px); align-items: start; } }
+/* One column of large frames, stacked. The v2 cap of 400px existed because the
+   source was a 740px phone grab; these renditions are 1500px wide, so the
+   photograph finally gets to be the size a clothing site wants it. */
+.pdp__gal { display: grid; gap: var(--s2); grid-template-columns: 1fr; }
+.pdp__shot { width: 100%; cursor: zoom-in; }
 @media (min-width: 940px) { .pdp__info { position: sticky; inset-block-start: calc(var(--top-h) + var(--s5)); } }
 
 .crumbs { display: flex; gap: var(--s2); font-size: 12.5px; color: var(--muted); margin-block-end: var(--s4); }
 .crumbs a:hover { color: var(--ink); }
 
-.pdp__ref { font-size: 12px; color: var(--thread-d); font-weight: 500; }
-.pdp h1 { font-size: clamp(24px, 3vw, 32px); font-weight: 400; margin-block-start: var(--s1); }
+/* the piece number is a spec — label voice */
+.pdp__ref {
+  font-family: var(--mono); direction: ltr; unicode-bidi: isolate;
+  font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--thread);
+}
+.pdp h1 { font-size: clamp(28px, 3.6vw, 42px); font-weight: 700; line-height: 1.12; margin-block-start: var(--s2); }
 .pdp__latin { margin-block-start: var(--s1); }
 .pdp__price { display: flex; align-items: baseline; gap: var(--s3); margin-block: var(--s5) var(--s1); }
-.pdp__price b { font-size: 22px; font-weight: 500; }
+.pdp__price b { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .pdp__price s { color: var(--muted); font-size: 15px; }
 
 .opt { margin-block-start: var(--s6); }
@@ -508,13 +583,14 @@ main { min-height: 60vh; }
 
 .swatches { display: flex; gap: var(--s2); flex-wrap: wrap; }
 .sw {
-  position: relative; width: 40px; height: 40px;
+  position: relative; width: 44px; height: 44px;
   border: 1px solid var(--edge);
   transition: box-shadow .2s var(--ease);
 }
 .sw[aria-current='true'] { box-shadow: 0 0 0 1px var(--ink); border-color: var(--ink); }
 
 .sizes { display: flex; gap: var(--s2); flex-wrap: wrap; }
+.size { font-family: var(--mono); letter-spacing: .06em; }
 .size {
   position: relative; min-width: 54px; height: 46px; padding-inline: var(--s3);
   display: grid; place-items: center;
@@ -655,7 +731,7 @@ main { min-height: 60vh; }
 .drawer {
   position: fixed; inset-block: 0; inset-inline-end: 0; z-index: 120;
   width: min(430px, 100vw); display: flex; flex-direction: column;
-  background: rgba(239, 238, 233, .88);
+  background: rgba(13, 13, 15, .90);
   -webkit-backdrop-filter: blur(28px) saturate(180%);
   backdrop-filter: blur(28px) saturate(180%);
   border-inline-start: 1px solid rgba(255, 255, 255, .6);
@@ -670,7 +746,7 @@ main { min-height: 60vh; }
   .drawer { background: var(--paper); }
 }
 .scrim {
-  position: fixed; inset: 0; z-index: 110; background: rgba(22,24,28,.34);
+  position: fixed; inset: 0; z-index: 110; background: rgba(0,0,0,.62);
   -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
   opacity: 0; pointer-events: none; transition: opacity .4s var(--ease);
 }
@@ -798,7 +874,7 @@ main { min-height: 60vh; }
 .gate__f label { font-size: 12px; color: #5B616A; }
 .gate__f input {
   height: 48px; padding-inline: var(--s3); border: 1px solid #D6D7DB; background: #fff;
-  color: #16181C; font-family: 'YekanLat', sans-serif; letter-spacing: .1em; font-size: 15px;
+  color: var(--paper); font-family: 'YekanLat', sans-serif; letter-spacing: .1em; font-size: 15px;
 }
 .gate__f input:focus { outline: none; border-color: #16181C; }
 .gate__grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s3); }
@@ -852,7 +928,7 @@ body.on-gateway .a2hs, body.on-gateway .ft { display: none; }
 
 .ladder { display: grid; gap: var(--s3); margin-block-start: var(--s5); position: relative; z-index: 1; }
 .ladder__track { height: 2px; background: rgba(237,239,234,.16); overflow: hidden; }
-.ladder__fill { height: 100%; background: #E8895F; transition: width 1s var(--ease-o); }
+.ladder__fill { height: 100%; background: var(--thread); transition: width 1s var(--ease-o); }
 .ladder__marks { display: flex; justify-content: space-between; font-size: 11.5px; color: rgba(237,239,234,.5); }
 .ladder__marks .on { color: #EDEFEA; }
 
@@ -934,21 +1010,21 @@ a.order:hover { border-color: var(--edge); }
   display: none; grid-auto-flow: column; grid-auto-columns: 1fr;
   padding: 5px;
   border-radius: 22px;
-  background: rgba(252, 252, 250, .62);
-  border: 1px solid rgba(255, 255, 255, .7);
-  /* a bright top edge is light catching the surface; the dark underside is
-     the slab's thickness. Without both it reads as a flat translucent box. */
+  background: rgba(26, 26, 31, .66);
+  border: 1px solid rgba(245, 245, 242, .12);
+  /* the bright edge is now a thin highlight along the top rather than a white
+     rim: on a dark ground the slab reads by its edge light, not its fill */
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, .9),
-    inset 0 -1px 0 rgba(22, 24, 28, .05),
-    0 10px 34px rgba(22, 24, 28, .13),
-    0 2px 8px rgba(22, 24, 28, .07);
+    inset 0 1px 0 rgba(245, 245, 242, .16),
+    inset 0 -1px 0 rgba(0, 0, 0, .5),
+    0 12px 40px rgba(0, 0, 0, .55),
+    0 2px 10px rgba(0, 0, 0, .4);
   -webkit-backdrop-filter: blur(26px) saturate(190%);
   backdrop-filter: blur(26px) saturate(190%);
   transition: transform .42s var(--ease-o), opacity .26s var(--ease);
 }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .tabbar { background: rgba(250, 250, 248, .98); }
+  .tabbar { background: rgba(22, 22, 27, .98); }
 }
 /* out of the way while a sheet or the keyboard owns the screen */
 body.tabs-away .tabbar {
@@ -983,7 +1059,7 @@ body.tabs-away .tabbar {
 
 .mmenu {
   position: fixed; inset: 0; z-index: 130;
-  background: rgba(239, 238, 233, .82);
+  background: rgba(13, 13, 15, .84);
   -webkit-backdrop-filter: blur(30px) saturate(180%);
   backdrop-filter: blur(30px) saturate(180%);
   padding: calc(var(--sat) + var(--s7)) var(--pad) calc(var(--tab-h) + var(--s5));
@@ -1008,7 +1084,7 @@ body.tabs-away .tabbar {
 .mmenu__ft { margin-block-start: var(--s7); display: grid; gap: var(--s2); font-size: 13px; color: var(--muted); }
 
 .lightbox {
-  position: fixed; inset: 0; z-index: 150; background: rgba(239,238,233,.97);
+  position: fixed; inset: 0; z-index: 150; background: rgba(13,13,15,.97);
   display: grid; place-items: center; padding: calc(var(--sat) + var(--s5)) var(--s5) var(--s5);
   opacity: 0; pointer-events: none; transition: opacity .3s var(--ease);
 }
